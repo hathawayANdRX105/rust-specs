@@ -51,7 +51,9 @@ dylint_linting::declare_late_lint! {
 }
 
 fn is_option_or_result(tcx: TyCtxt<'_>, ty: Ty<'_>) -> bool {
-    let Some(adt) = ty.ty_adt_def() else { return false };
+    let Some(adt) = ty.ty_adt_def() else {
+        return false;
+    };
     let did = adt.did();
     tcx.is_diagnostic_item(sym::Option, did) || tcx.is_diagnostic_item(sym::Result, did)
 }
@@ -63,7 +65,9 @@ fn contains_cjk(s: &str) -> bool {
 
 impl<'tcx> LateLintPass<'tcx> for BanUnwrap {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
-        let ExprKind::MethodCall(path, receiver, args, _) = expr.kind else { return };
+        let ExprKind::MethodCall(path, receiver, args, _) = expr.kind else {
+            return;
+        };
         let name = path.ident.name.as_str();
 
         let recv_ty = cx.typeck_results().expr_ty_adjusted(receiver);

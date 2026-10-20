@@ -50,7 +50,10 @@ dylint_linting::declare_late_lint! {
 fn block_ends_with_early_exit(block: &Block<'_>) -> bool {
     // The early exit can be a tail expression or the last statement.
     if let Some(tail) = block.expr
-        && matches!(tail.kind, ExprKind::Ret(_) | ExprKind::Break(..) | ExprKind::Continue(..))
+        && matches!(
+            tail.kind,
+            ExprKind::Ret(_) | ExprKind::Break(..) | ExprKind::Continue(..)
+        )
     {
         return true;
     }
@@ -68,8 +71,12 @@ fn block_ends_with_early_exit(block: &Block<'_>) -> bool {
 
 impl<'tcx> LateLintPass<'tcx> for EarlyReturnNeedsNoElse {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
-        let ExprKind::If(_, then, Some(else_expr)) = expr.kind else { return };
-        let ExprKind::Block(then_block, _) = then.kind else { return };
+        let ExprKind::If(_, then, Some(else_expr)) = expr.kind else {
+            return;
+        };
+        let ExprKind::Block(then_block, _) = then.kind else {
+            return;
+        };
 
         if block_ends_with_early_exit(then_block) {
             span_lint(
