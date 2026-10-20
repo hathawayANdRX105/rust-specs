@@ -184,6 +184,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "consecutive_same_shape_loops"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
 name = "defmt"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

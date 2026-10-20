@@ -1,0 +1,12 @@
+warning: consecutive same-shape push loops; use an iterator chain + collect
+  --> $DIR/main.rs:5:5
+   |
+LL | /     for x in a {
+LL | |         out.push(x + 1);
+LL | |     }
+   | |_____^
+   |
+   = note: `#[warn(consecutive_same_shape_loops)]` on by default
+
+warning: 1 warning emitted
+
