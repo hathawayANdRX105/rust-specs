@@ -24,3 +24,15 @@ Candidate for a future refactor PR: flatten with combinators / helper extraction
 ## early-return-needs-no-else (2026-10-21)
 
 Scan: same command. No hits in coding-harness-session closure; pattern absent.
+
+## ferrite CI: overview_wire_contract flake (2026-10-21)
+
+- Symptom: PR #441 shell-ci test fails repeatedly at
+  tests/overview_wire_contract.rs dashboard_flat_envelope_fields_and_unit_deltas
+  (channels/users/groups delta assertions, left=2 right=1).
+- Root cause: test relies on SERIAL isolation within one process, but the CI
+  postgres instance is shared across concurrent workflow runs; another job's
+  writes land inside the delta window. Not related to PR #441's diff
+  (unwrap->expect in 17 unrelated files; lint+app-shell pass).
+- Status: environmental; needs either CI serialization of this test or a
+  per-run database.
