@@ -15,11 +15,11 @@ use rustc_middle::ty::{Ty, TyCtxt};
 use rustc_span::symbol::sym;
 
 dylint_linting::declare_late_lint! {
-    /// Checks for any `.unwrap()` call on a `Result`/`Option` receiver.
-    /// `unwrap` panics without explaining the failure mode; use
-    /// `.expect("english reason")` to document the invariant, or `?` to
-    /// propagate the error in fallible functions. The `expect` message must
-    /// be in English.
+    /// This project bans `.unwrap()` on `Result`/`Option`. Replace every
+    /// bare `unwrap` with `.expect("...")` where the message, written in
+    /// English, explains why the unwrap is safe (the invariant that makes
+    /// the failure unreachable). In a fallible function, prefer `?` to
+    /// propagate the error instead.
     ///
     /// ### Why is this bad?
     ///
@@ -47,7 +47,7 @@ dylint_linting::declare_late_lint! {
     /// ```
     pub BAN_UNWRAP,
     Warn,
-    "bare `unwrap` or non-English `expect`; use `expect(\"english reason\")` or `?`"
+    "unwrap is banned; use `expect(\"...\")` with an English reason, or `?`"
 }
 
 fn is_option_or_result(tcx: TyCtxt<'_>, ty: Ty<'_>) -> bool {
@@ -76,8 +76,8 @@ impl<'tcx> LateLintPass<'tcx> for BanUnwrap {
                 cx,
                 BAN_UNWRAP,
                 expr.span,
-                "bare `unwrap` panics without a reason",
-                "use `expect` with an English reason",
+                "`unwrap` is banned in this project; it panics without explaining why",
+                "use `expect(\"...\")` with an English reason explaining why the unwrap is safe",
                 "expect(\"reason in english\")".to_string(),
                 Applicability::HasPlaceholders,
             );
@@ -95,7 +95,7 @@ impl<'tcx> LateLintPass<'tcx> for BanUnwrap {
                     cx,
                     BAN_UNWRAP,
                     first.span,
-                    "`expect` message must be in English",
+                    "`expect` messages must be English; write why the unwrap is safe in English",
                     "rewrite the message in English",
                     "expect(\"reason in english\")".to_string(),
                     Applicability::HasPlaceholders,
