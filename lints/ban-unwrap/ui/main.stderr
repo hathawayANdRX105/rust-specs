@@ -1,10 +1,16 @@
-warning: bare `unwrap` panics without a reason; use `expect("...")` or `?`
+warning: bare `unwrap` panics without a reason
   --> $DIR/main.rs:4:8
    |
 LL |     Ok(v.unwrap())
-   |        ^^^^^^^^^^
+   |        ^^^^^^^^^^ help: use `expect` with an English reason: `expect("reason in english")`
    |
    = note: `#[warn(ban_unwrap)]` on by default
 
-warning: 1 warning emitted
+warning: `expect` message must be in English
+  --> $DIR/main.rs:8:17
+   |
+LL |     Ok(v.expect("值必须存在"))
+   |                 ^^^^^^^^^^^^ help: rewrite the message in English: `expect("reason in english")`
+
+warning: 2 warnings emitted
 

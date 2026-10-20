@@ -1,11 +1,14 @@
 #![feature(rustc_private)]
 #![warn(unused_extern_crates)]
 
+extern crate rustc_ast;
+extern crate rustc_errors;
 extern crate rustc_hir;
 extern crate rustc_middle;
 extern crate rustc_span;
 
-use clippy_utils::diagnostics::span_lint;
+use clippy_utils::diagnostics::span_lint_and_sugg;
+use rustc_errors::Applicability;
 use rustc_hir::{Expr, ExprKind};
 use rustc_lint::{LateContext, LateLintPass};
 use rustc_middle::ty::{Ty, TyCtxt};
@@ -14,13 +17,14 @@ use rustc_span::symbol::sym;
 dylint_linting::declare_late_lint! {
     /// Checks for any `.unwrap()` call on a `Result`/`Option` receiver.
     /// `unwrap` panics without explaining the failure mode; use
-    /// `.expect("reason")` to document the invariant, or `?` to propagate
-    /// the error in fallible functions.
+    /// `.expect("english reason")` to document the invariant, or `?` to
+    /// propagate the error in fallible functions. The `expect` message must
+    /// be in English.
     ///
     /// ### Why is this bad?
     ///
     /// `unwrap` hides why a panic can happen. `expect("reason")` forces the
-    /// author to state the invariant; `?` lets the caller handle the error.
+    /// author to state the invariant; the project requires English messages.
     ///
     /// ### Known problems
     ///
@@ -31,6 +35,7 @@ dylint_linting::declare_late_lint! {
     ///
     /// ```rust
     /// let x = v.unwrap();
+    /// let y = v.expect("值必须存在");
     /// ```
     ///
     /// Use instead:
@@ -42,7 +47,7 @@ dylint_linting::declare_late_lint! {
     /// ```
     pub BAN_UNWRAP,
     Warn,
-    "bare `unwrap` panics without a reason; use `expect(\"...\")` or `?`"
+    "bare `unwrap` or non-English `expect`; use `expect(\"english reason\")` or `?`"
 }
 
 fn is_option_or_result(tcx: TyCtxt<'_>, ty: Ty<'_>) -> bool {
@@ -51,21 +56,53 @@ fn is_option_or_result(tcx: TyCtxt<'_>, ty: Ty<'_>) -> bool {
     tcx.is_diagnostic_item(sym::Option, did) || tcx.is_diagnostic_item(sym::Result, did)
 }
 
+/// True when `s` contains any CJK Unified Ideograph (U+4E00..U+9FFF).
+fn contains_cjk(s: &str) -> bool {
+    s.chars().any(|c| ('\u{4e00}'..='\u{9fff}').contains(&c))
+}
+
 impl<'tcx> LateLintPass<'tcx> for BanUnwrap {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
-        let ExprKind::MethodCall(path, receiver, _, _) = expr.kind else { return };
+        let ExprKind::MethodCall(path, receiver, args, _) = expr.kind else { return };
         let name = path.ident.name.as_str();
-        if name != "unwrap" { return; }
 
         let recv_ty = cx.typeck_results().expr_ty_adjusted(receiver);
-        if !is_option_or_result(cx.tcx, recv_ty) { return; }
+        if !is_option_or_result(cx.tcx, recv_ty) {
+            return;
+        }
 
-        span_lint(
-            cx,
-            BAN_UNWRAP,
-            expr.span,
-            "bare `unwrap` panics without a reason; use `expect(\"...\")` or `?`",
-        );
+        if name == "unwrap" {
+            span_lint_and_sugg(
+                cx,
+                BAN_UNWRAP,
+                expr.span,
+                "bare `unwrap` panics without a reason",
+                "use `expect` with an English reason",
+                "expect(\"reason in english\")".to_string(),
+                Applicability::HasPlaceholders,
+            );
+            return;
+        }
+
+        if name == "expect" {
+            // First argument is the message string literal.
+            if let Some(first) = args.first()
+                && let ExprKind::Lit(lit) = first.kind
+                && let rustc_ast::LitKind::Str(sym_str, _) = lit.node
+                && contains_cjk(sym_str.as_str())
+            {
+                span_lint_and_sugg(
+                    cx,
+                    BAN_UNWRAP,
+                    first.span,
+                    "`expect` message must be in English",
+                    "rewrite the message in English",
+                    "expect(\"reason in english\")".to_string(),
+                    Applicability::HasPlaceholders,
+                );
+            }
+            return;
+        }
     }
 }
 
