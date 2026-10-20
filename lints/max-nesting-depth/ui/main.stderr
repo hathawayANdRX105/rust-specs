@@ -1,0 +1,12 @@
+warning: control flow nesting exceeds 4 levels; extract a helper or use combinators
+  --> $DIR/main.rs:9:21
+   |
+LL | /                     if *v > 0 {
+LL | |                         sum += *v;
+LL | |                     }
+   | |_____________________^
+   |
+   = note: `#[warn(max_nesting_depth)]` on by default
+
+warning: 1 warning emitted
+
