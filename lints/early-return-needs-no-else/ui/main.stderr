@@ -1,0 +1,14 @@
+warning: `if` branch ends with return/break/continue; drop the `else`
+  --> $DIR/main.rs:4:5
+   |
+LL | /     if flag {
+LL | |         return 0;
+LL | |     } else {
+LL | |         1
+LL | |     }
+   | |_____^
+   |
+   = note: `#[warn(early_return_needs_no_else)]` on by default
+
+warning: 1 warning emitted
+

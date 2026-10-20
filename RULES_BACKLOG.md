@@ -16,7 +16,7 @@ Only rules that neither clippy nor canon's RUST-IDIOM can express belong here.
 | expect-in-non-result | detect `.expect` in non-Result fns where `?` is unavailable; type info needed |
 | max-nesting-depth (DONE) | configurable threshold (e.g. 4), HIR block nesting |
 | consecutive-same-shape-loops | N loops with same shape → chain; syn can do but weak across fns |
-| early-return-needs-no-else | `if c { return .. } else { .. }` → drop else |
+| early-return-needs-no-else (DONE) | `if c { return .. } else { .. }` → drop else |
 
 ## Process
 
