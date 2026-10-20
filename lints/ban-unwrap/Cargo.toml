@@ -1,5 +1,5 @@
 [package]
-name = "unwrap_in_fallible"
+name = "ban_unwrap"
 version = "0.1.0"
 authors = ["authors go here"]
 description = "description goes here"

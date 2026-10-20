@@ -1,0 +1,10 @@
+warning: bare `unwrap` panics without a reason; use `expect("...")` or `?`
+  --> $DIR/main.rs:4:8
+   |
+LL |     Ok(v.unwrap())
+   |        ^^^^^^^^^^
+   |
+   = note: `#[warn(ban_unwrap)]` on by default
+
+warning: 1 warning emitted
+

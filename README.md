@@ -11,7 +11,7 @@ project-specific style rules, or readability/nesting policies.
 
 | Lint | What it detects | Status |
 |---|---|---|
-| `unwrap-in-fallible` | `.unwrap()` / `.expect()` inside a Result/Option-returning function; use `?` instead | ✅ implemented, ui-tested |
+| `ban-unwrap` | any bare `.unwrap()` on Result/Option; use `expect("reason")` or `?` | ✅ implemented, ui-tested |
 
 ## Usage
 
