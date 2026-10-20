@@ -20,3 +20,7 @@ Scan: `cargo +nightly-2026-08-20 dylint --path ... --pattern 'lints/*' --all -- 
 | crates/harness-agent-loop/src/runtime/mod.rs:626 | >4 nested control flow |
 
 Candidate for a future refactor PR: flatten with combinators / helper extraction.
+
+## early-return-needs-no-else (2026-10-21)
+
+Scan: same command. No hits in coding-harness-session closure; pattern absent.
