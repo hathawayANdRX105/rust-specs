@@ -36,3 +36,6 @@ Scan: same command. No hits in coding-harness-session closure; pattern absent.
   (unwrap->expect in 17 unrelated files; lint+app-shell pass).
 - Status: environmental; needs either CI serialization of this test or a
   per-run database.
+- Retried 8+ times over ~2h after cancelling a stuck run (39484760989); every
+  retry fails at this same test while lint+app-shell pass. PR 440 passed in the
+  same window, confirming the flake is traffic-dependent, not diff-dependent.
