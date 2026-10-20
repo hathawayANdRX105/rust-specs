@@ -1,21 +1,33 @@
-# template
+# ban-unwrap
 
-### What it does
+## What it does
 
-### Why is this bad?
+Reports any bare `.unwrap()` call on a `Result`/`Option` receiver, and any
+`expect("...")` message that contains CJK characters.
 
-### Known problems
+## Why is this bad?
 
-Remove if none.
+`unwrap` panics without explaining why the failure is impossible. The project
+requires `expect("english reason")` instead: the message documents the invariant
+that makes the unwrap safe. In fallible functions, `?` propagates the error.
 
-### Example
+## Known problems
+
+The lint does not distinguish tests/examples. Add `#[allow(ban_unwrap)]` where a
+bare unwrap is acceptable, or configure paths to exclude them.
+
+## Example
 
 ```rust
-// example code where a warning is issued
+// warning issued
+let x = v.unwrap();
+let y = v.expect("值必须存在");
 ```
 
 Use instead:
 
 ```rust
-// example code that does not raise a warning
+// no warning
+let x = v.expect("value must be present");
+let y = v?; // in a fallible function
 ```
