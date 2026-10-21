@@ -13,8 +13,9 @@ functions or rewrite with Option/Result combinators (`map`, `filter`,
 
 ## Known problems
 
-Depth is syntactic; `for` / `while` desugar to `loop` + `match`, so they count
-as two levels.
+Depth counts **visual** nesting: a `for`/`while` counts as one level (its HIR
+desugaring — `Match` + `Loop` + the `next()` `Match` — is not counted), and an
+`else if` chain counts as one level (the chain is flat, not nested).
 
 ## Example
 

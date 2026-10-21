@@ -1,5 +1,5 @@
 warning: control flow nesting exceeds 4 levels; extract a helper or use combinators
-  --> $DIR/main.rs:9:21
+  --> $DIR/main.rs:10:21
    |
 LL | /                     if *v > 0 {
 LL | |                         sum += *v;
