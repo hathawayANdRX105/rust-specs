@@ -15,7 +15,12 @@ functions or rewrite with Option/Result combinators (`map`, `filter`,
 
 Depth counts **visual** nesting: a `for`/`while` counts as one level (its HIR
 desugaring — `Match` + `Loop` + the `next()` `Match` — is not counted), and an
-`else if` chain counts as one level (the chain is flat, not nested).
+`else if` chain counts as one level (the chain is flat, not nested). The walk
+visits every HIR node once, so a node reachable through two paths (a
+desugared `while let` body, for instance) is measured once.
+
+Reported depths have not been cross-checked against every HIR shape; treat a
+hit as a prompt to look, not as a verdict.
 
 ## Example
 

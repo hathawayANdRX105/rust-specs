@@ -5,7 +5,9 @@ extern crate rustc_hir;
 extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
-use rustc_hir::{Expr, ExprKind, LoopSource, MatchSource, PatKind, Stmt, StmtKind};
+use std::collections::HashSet;
+
+use rustc_hir::{Expr, ExprKind, HirId, LoopSource, MatchSource, PatKind, Stmt, StmtKind};
 use rustc_lint::{LateContext, LateLintPass};
 
 dylint_linting::declare_late_lint! {
@@ -35,7 +37,13 @@ const MAX_DEPTH: usize = 4;
 
 const MSG: &str = "control flow nesting exceeds 4 levels; extract a helper or use combinators";
 
-fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
+fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize, seen: &mut HashSet<HirId>) {
+    // The same HIR node can be reached through more than one path (a
+    // desugared `while let` body, for instance). Measure every node once,
+    // so the depth reflects the source, not the desugaring.
+    if !seen.insert(expr.hir_id) {
+        return;
+    }
     match expr.kind {
         // `for x in it { .. }` desugars to DropTemps(Match(iterexpr, [arm],
         // ForLoopDesugar)) whose arm body is a Loop that holds the `next()`
@@ -43,27 +51,27 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
         // desugaring.
         ExprKind::DropTemps(inner) => {
             if is_for_desugar(inner) {
-                visit_for(cx, inner, depth);
+                visit_for(cx, inner, depth, seen);
             } else {
-                visit(cx, inner, depth);
+                visit(cx, inner, depth, seen);
             }
         }
         ExprKind::Match(_, [_], MatchSource::ForLoopDesugar) => {
-            visit_for(cx, expr, depth);
+            visit_for(cx, expr, depth, seen);
         }
         ExprKind::If(cond, then, els) => {
             let depth = depth + 1;
             report(cx, expr, depth);
             // The condition sits *beside* the `if`, not inside it.
-            visit(cx, cond, depth - 1);
-            visit(cx, then, depth);
+            visit(cx, cond, depth - 1, seen);
+            visit(cx, then, depth, seen);
             if let Some(els) = els {
                 // `} else if .. {` is a flat chain: the inner `if` shares the
                 // level of the outer one.
                 if matches!(els.kind, ExprKind::If(..)) {
-                    visit(cx, els, depth - 1);
+                    visit(cx, els, depth - 1, seen);
                 } else {
-                    visit(cx, els, depth);
+                    visit(cx, els, depth, seen);
                 }
             }
         }
@@ -71,12 +79,12 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
             let depth = depth + 1;
             report(cx, expr, depth);
             // The scrutinee sits *beside* the `match`, not inside it.
-            visit(cx, scrut, depth - 1);
+            visit(cx, scrut, depth - 1, seen);
             for arm in arms {
                 if let Some(guard) = arm.guard {
-                    visit(cx, guard, depth);
+                    visit(cx, guard, depth, seen);
                 }
-                visit(cx, arm.body, depth);
+                visit(cx, arm.body, depth, seen);
             }
         }
         ExprKind::Loop(block, _, source, _) => {
@@ -84,7 +92,7 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
                 // `for` desugars to Match(ForLoopDesugar) + Loop, and the
                 // caller (`visit_for`) already counted the level.
                 LoopSource::ForLoop => {
-                    visit_loop_body(cx, block, depth);
+                    visit_loop_body(cx, block, depth, seen);
                 }
                 // A `while` *is* this Loop node — nobody counted it yet, so it
                 // is a level of its own. Its first statement is the
@@ -92,17 +100,17 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
                 LoopSource::While => {
                     let depth = depth + 1;
                     report(cx, expr, depth);
-                    visit_while_body(cx, block, depth);
+                    visit_while_body(cx, block, depth, seen);
                 }
                 _ => {
                     let depth = depth + 1;
                     report(cx, expr, depth);
-                    visit_loop_body(cx, block, depth);
+                    visit_loop_body(cx, block, depth, seen);
                 }
             }
         }
         ExprKind::Block(block, _) => {
-            visit_block(cx, block, depth)
+            visit_block(cx, block, depth, seen)
         }
         _ => {}
     }
@@ -123,7 +131,12 @@ fn is_for_desugar(expr: &Expr<'_>) -> bool {
 }
 
 /// Walk a `for` loop: one level, then the user's body only.
-fn visit_for<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
+fn visit_for<'tcx>(
+    cx: &LateContext<'tcx>,
+    expr: &Expr<'tcx>,
+    depth: usize,
+    seen: &mut HashSet<HirId>,
+) {
     let ExprKind::Match(_, [arm], MatchSource::ForLoopDesugar) = expr.kind else {
         return;
     };
@@ -133,14 +146,14 @@ fn visit_for<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
     if let ExprKind::Loop(block, _, _, _) = arm.body.kind {
         for stmt in block.stmts.iter().skip(1) {
             if let Some(e) = stmt_expr(stmt) {
-                visit(cx, e, depth);
+                visit(cx, e, depth, seen);
             }
         }
         if let Some(e) = block.expr {
-            visit(cx, e, depth);
+            visit(cx, e, depth, seen);
         }
         if let Some(body) = for_user_body(&block.stmts) {
-            visit(cx, body, depth);
+            visit(cx, body, depth, seen);
         } else {
         }
     }
@@ -161,31 +174,71 @@ fn for_user_body<'a, 'tcx>(stmts: &'a [Stmt<'tcx>]) -> Option<&'a Expr<'tcx>> {
     Some(arm.body)
 }
 
-/// A `while` body: skip the desugared `if !cond { break }` statement.
-fn visit_while_body<'tcx>(cx: &LateContext<'tcx>, block: &rustc_hir::Block<'tcx>, depth: usize) {
-    for stmt in block.stmts.iter().skip(1) {
+/// A `while` body.
+///
+/// `while cond { .. }` desugars to `loop { if !cond { break } .. }` and
+/// `while let pat = expr { .. }` to `loop { match expr { pat => body, _ => break } }`.
+/// In both cases the first statement is the desugaring, and the user's body
+/// lives inside it — so walk that arm, not the raw statement (walking the
+/// raw statement would count the desugared `match`/`if` as a level and
+/// measure the user's body twice).
+fn visit_while_body<'tcx>(
+    cx: &LateContext<'tcx>,
+    block: &rustc_hir::Block<'tcx>,
+    depth: usize,
+    seen: &mut HashSet<HirId>,
+) {
+    let mut rest = block.stmts.iter();
+    if let Some(first) = rest.next()
+        && let Some(e) = stmt_expr(first)
+    {
+        match e.kind {
+            // `while let`: the user's body is the arm that binds the pattern.
+            ExprKind::Match(_, arms, _) => {
+                for arm in arms {
+                    if !matches!(arm.pat.kind, PatKind::Wild) {
+                        visit(cx, arm.body, depth, seen);
+                    }
+                }
+            }
+            // `while cond`: the desugared `if !cond { break }` has no user body.
+            ExprKind::If(..) => {}
+            _ => visit(cx, e, depth, seen),
+        }
+    }
+    for stmt in rest {
         if let Some(e) = stmt_expr(stmt) {
-            visit(cx, e, depth);
+            visit(cx, e, depth, seen);
         }
     }
     if let Some(e) = block.expr {
-        visit(cx, e, depth);
+        visit(cx, e, depth, seen);
     }
 }
 
-fn visit_loop_body<'tcx>(cx: &LateContext<'tcx>, block: &rustc_hir::Block<'tcx>, depth: usize) {
+fn visit_loop_body<'tcx>(
+    cx: &LateContext<'tcx>,
+    block: &rustc_hir::Block<'tcx>,
+    depth: usize,
+    seen: &mut HashSet<HirId>,
+) {
     for stmt in block.stmts {
         if let Some(e) = stmt_expr(stmt) {
-            visit(cx, e, depth);
+            visit(cx, e, depth, seen);
         }
     }
     if let Some(e) = block.expr {
-        visit(cx, e, depth);
+        visit(cx, e, depth, seen);
     }
 }
 
-fn visit_block<'tcx>(cx: &LateContext<'tcx>, block: &rustc_hir::Block<'tcx>, depth: usize) {
-    visit_loop_body(cx, block, depth);
+fn visit_block<'tcx>(
+    cx: &LateContext<'tcx>,
+    block: &rustc_hir::Block<'tcx>,
+    depth: usize,
+    seen: &mut HashSet<HirId>,
+) {
+    visit_loop_body(cx, block, depth, seen);
 }
 
 fn stmt_expr<'a, 'tcx>(stmt: &'a Stmt<'tcx>) -> Option<&'a Expr<'tcx>> {
@@ -213,7 +266,8 @@ impl<'tcx> LateLintPass<'tcx> for MaxNestingDepth {
         _span: rustc_span::Span,
         _id: rustc_hir::def_id::LocalDefId,
     ) {
-        visit(cx, body.value, 0);
+        let mut seen = HashSet::new();
+        visit(cx, body.value, 0, &mut seen);
     }
 }
 
