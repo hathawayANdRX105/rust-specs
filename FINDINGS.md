@@ -2,29 +2,35 @@
 
 Scans produced by rust-lints rules against the ferrite workspace.
 
-## max-nesting-depth (2026-10-21, after the depth fix)
+## max-nesting-depth (2026-10-21, after the depth fixes)
 
-Whole-workspace scan, after counting *visual* nesting (a `for`/`while` is one
-level, an `else if` chain is one level):
+Whole-workspace scan, with the rule counting *visual* nesting:
 
-**96 hits** (the first version of the rule reported 274 because it counted
-the `for`/`while` HIR desugaring and the `else if` chain).
+**89 hits.** The number came down from 274 as the rule was corrected:
+
+| Version | Hits | What was wrong |
+|---|---|---|
+| first | 274 | counted the `for`/`while` HIR desugaring and the `else if` chain |
+| for/else-if fixed | 96 | a `match` scrutinee and an `if` condition were counted as nested |
+| scrutinee fixed | 58 | a `while` was never counted (it is the `Loop` node itself) |
+| final | 89 | — (`while` now counts, so the number went up again) |
+
+Top files:
 
 | File | Hits |
 |---|---|
-| crates/api-mcp/src/mcp_dispatch.rs | 19 |
-| crates/ui-coding/src/state/store.rs | 8 |
-| crates/ui-coding/src/state/subscriptions.rs | 7 |
-| crates/gateway-forward/src/pipeline.rs | 6 |
-| crates/harness-tools/src/semsearch/rank.rs | 4 |
-| crates/api-mcp/src/mcp_service.rs | 4 |
+| crates/harness-tools/src/semsearch/rank.rs | 11 |
+| crates/ui-coding/src/state/store.rs | 10 |
+| crates/gateway-metering/src/estimate.rs | 7 |
+| crates/ui-coding/src/state/subscriptions.rs | 5 |
+| crates/harness-tools/src/semsearch.rs | 5 |
+| crates/gateway-forward/src/pipeline.rs | 5 |
 
-The rest are spread over ~40 files with 1-3 hits each. Spot checks of the
-survivors show real nesting (match arms inside match arms inside a `match`
-result), so the number is actionable.
+Spot check of `semsearch/rank.rs:750` confirms real nesting:
+`while` -> `if` -> `for` -> `if` -> `if` = 5 levels.
 
 Candidate for a future refactor PR: flatten with combinators / helper
-extraction, starting with `mcp_dispatch.rs`.
+extraction, starting with `semsearch/rank.rs` and `ui-coding/src/state/store.rs`.
 
 ## early-return-needs-no-else (2026-10-21)
 
