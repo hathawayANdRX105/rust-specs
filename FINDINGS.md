@@ -39,3 +39,20 @@ Scan: same command. No hits in coding-harness-session closure; pattern absent.
 - Retried 8+ times over ~2h after cancelling a stuck run (39484760989); every
   retry fails at this same test while lint+app-shell pass. PR 440 passed in the
   same window, confirming the flake is traffic-dependent, not diff-dependent.
+
+## ban-unwrap (2026-10-21, final)
+
+Full-workspace scan on ferrite main:
+
+```text
+cargo +nightly-2026-08-20 dylint --path /home/hathaway/projects/rust-lints \
+  --pattern 'lints/*' --all --workspace
+```
+
+Result: **0 hits** for `ban-unwrap` (bare unwrap + non-English expect) across all
+53 packages. The last 4 hits (all in `ui-feature-component`) went to PR #448.
+
+Note: the scan needs `--workspace`; `cargo dylint` rejects multiple `-p` flags.
+`ui-components` must compile on the lint toolchain (nightly-2026-08-20) or the
+whole scan aborts — PR #448 fixed a raw identifier inside an rsx format string
+that broke exactly that.
