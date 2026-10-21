@@ -74,6 +74,12 @@ impl<'tcx> LateLintPass<'tcx> for EarlyReturnNeedsNoElse {
         let ExprKind::If(_, then, Some(else_expr)) = expr.kind else {
             return;
         };
+        // `} else if .. {` is a flat chain, not a real `else` block: the
+        // `break`/`return` inside it belongs to that other `if`, and there is
+        // no `else` to drop. Only a genuine else block is reported.
+        if matches!(else_expr.kind, ExprKind::If(..)) {
+            return;
+        }
         let ExprKind::Block(then_block, _) = then.kind else {
             return;
         };
@@ -86,7 +92,6 @@ impl<'tcx> LateLintPass<'tcx> for EarlyReturnNeedsNoElse {
                 "`if` branch ends with return/break/continue; drop the `else`",
             );
         }
-        let _ = else_expr;
     }
 }
 

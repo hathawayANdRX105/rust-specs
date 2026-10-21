@@ -14,7 +14,8 @@ An `else` after an early exit implies both branches are alternatives, but the
 ## Known problems
 
 Only the last statement of the `if` block is examined; a deeper-nested early
-exit is not detected.
+exit is not detected. An `else if` chain is not reported: the `else` of such a
+chain is another `if`, so there is no `else` block to drop.
 
 ## Example
 

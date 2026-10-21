@@ -1,5 +1,5 @@
 warning: `if` branch ends with return/break/continue; drop the `else`
-  --> $DIR/main.rs:4:5
+  --> $DIR/main.rs:5:5
    |
 LL | /     if flag {
 LL | |         return 0;
