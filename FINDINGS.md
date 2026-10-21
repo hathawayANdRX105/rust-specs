@@ -29,8 +29,15 @@ Top files:
 Spot check of `semsearch/rank.rs:750` confirms real nesting:
 `while` -> `if` -> `for` -> `if` -> `if` = 5 levels.
 
-Candidate for a future refactor PR: flatten with combinators / helper
-extraction, starting with `semsearch/rank.rs` and `ui-coding/src/state/store.rs`.
+Done so far: `semsearch/rank.rs` (11 hits) — PR #450, split into
+`keyword_hit_at` + `skip_qualifiers`; a differential test ran the old and
+the new implementation over 20k generated inputs plus 32 hand-written edge
+cases and both agreed everywhere.
+
+Next candidates: `ui-coding/src/state/store.rs` (10),
+`gateway-metering/src/estimate.rs` (7),
+`ui-coding/src/state/subscriptions.rs` (5),
+`gateway-forward/src/pipeline.rs` (5).
 
 ## early-return-needs-no-else (2026-10-21)
 
