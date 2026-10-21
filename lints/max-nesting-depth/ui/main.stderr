@@ -8,5 +8,23 @@ LL | |                     }
    |
    = note: `#[warn(max_nesting_depth)]` on by default
 
-warning: 1 warning emitted
+warning: control flow nesting exceeds 4 levels; extract a helper or use combinators
+  --> $DIR/main.rs:63:21
+   |
+LL | /                     if n > 3 {
+LL | |                         if n > 5 {
+LL | |                             sum += n;
+LL | |                         }
+LL | |                     }
+   | |_____________________^
+
+warning: control flow nesting exceeds 4 levels; extract a helper or use combinators
+  --> $DIR/main.rs:64:25
+   |
+LL | /                         if n > 5 {
+LL | |                             sum += n;
+LL | |                         }
+   | |_________________________^
+
+warning: 3 warnings emitted
 

@@ -50,3 +50,25 @@ fn if_four(flag: bool, v: Option<u32>) -> u32 {
 }
 
 fn main() {}
+
+// while 算 1 层：while -> if -> match -> if -> if = 5 → 命中
+fn while_deep(items: &[u32]) -> usize {
+    let mut sum = 0usize;
+    let mut rest = items.len();
+    while rest > 0 {
+        if rest % 2 == 0 {
+            match rest {
+                0 => {}
+                n => {
+                    if n > 3 {
+                        if n > 5 {
+                            sum += n;
+                        }
+                    }
+                }
+            }
+        }
+        rest -= 1;
+    }
+    sum
+}

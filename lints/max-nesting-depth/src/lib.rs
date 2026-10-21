@@ -2,6 +2,7 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_hir;
+extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
 use rustc_hir::{Expr, ExprKind, LoopSource, MatchSource, PatKind, Stmt, StmtKind};
@@ -34,7 +35,7 @@ const MAX_DEPTH: usize = 4;
 
 const MSG: &str = "control flow nesting exceeds 4 levels; extract a helper or use combinators";
 
-fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize) {
+fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
     match expr.kind {
         // `for x in it { .. }` desugars to DropTemps(Match(iterexpr, [arm],
         // ForLoopDesugar)) whose arm body is a Loop that holds the `next()`
@@ -53,7 +54,8 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize) {
         ExprKind::If(cond, then, els) => {
             let depth = depth + 1;
             report(cx, expr, depth);
-            visit(cx, cond, depth);
+            // The condition sits *beside* the `if`, not inside it.
+            visit(cx, cond, depth - 1);
             visit(cx, then, depth);
             if let Some(els) = els {
                 // `} else if .. {` is a flat chain: the inner `if` shares the
@@ -68,7 +70,8 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize) {
         ExprKind::Match(scrut, arms, _) => {
             let depth = depth + 1;
             report(cx, expr, depth);
-            visit(cx, scrut, depth);
+            // The scrutinee sits *beside* the `match`, not inside it.
+            visit(cx, scrut, depth - 1);
             for arm in arms {
                 if let Some(guard) = arm.guard {
                     visit(cx, guard, depth);
@@ -78,9 +81,18 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize) {
         }
         ExprKind::Loop(block, _, source, _) => {
             match source {
-                // The `for`/`while` level was already counted by the caller.
-                LoopSource::ForLoop | LoopSource::While => {
+                // `for` desugars to Match(ForLoopDesugar) + Loop, and the
+                // caller (`visit_for`) already counted the level.
+                LoopSource::ForLoop => {
                     visit_loop_body(cx, block, depth);
+                }
+                // A `while` *is* this Loop node — nobody counted it yet, so it
+                // is a level of its own. Its first statement is the
+                // desugared `if !cond { break }`, which is not user nesting.
+                LoopSource::While => {
+                    let depth = depth + 1;
+                    report(cx, expr, depth);
+                    visit_while_body(cx, block, depth);
                 }
                 _ => {
                     let depth = depth + 1;
@@ -96,7 +108,7 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize) {
     }
 }
 
-fn report<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize) {
+fn report<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
     if depth > MAX_DEPTH {
         span_lint(cx, MAX_NESTING_DEPTH, expr.span, MSG);
     }
@@ -111,7 +123,7 @@ fn is_for_desugar(expr: &Expr<'_>) -> bool {
 }
 
 /// Walk a `for` loop: one level, then the user's body only.
-fn visit_for<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize) {
+fn visit_for<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize) {
     let ExprKind::Match(_, [arm], MatchSource::ForLoopDesugar) = expr.kind else {
         return;
     };
@@ -135,7 +147,7 @@ fn visit_for<'tcx>(cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>, depth: usize)
 }
 
 /// The user's `for` body: the second arm of the `next()` match.
-fn for_user_body<'tcx>(stmts: &'tcx [Stmt<'tcx>]) -> Option<&'tcx Expr<'tcx>> {
+fn for_user_body<'a, 'tcx>(stmts: &'a [Stmt<'tcx>]) -> Option<&'a Expr<'tcx>> {
     let first = stmt_expr(stmts.first()?)?;
     let ExprKind::Match(_, arms, _) = first.kind else {
         return None;
@@ -149,7 +161,19 @@ fn for_user_body<'tcx>(stmts: &'tcx [Stmt<'tcx>]) -> Option<&'tcx Expr<'tcx>> {
     Some(arm.body)
 }
 
-fn visit_loop_body<'tcx>(cx: &LateContext<'tcx>, block: &'tcx rustc_hir::Block<'tcx>, depth: usize) {
+/// A `while` body: skip the desugared `if !cond { break }` statement.
+fn visit_while_body<'tcx>(cx: &LateContext<'tcx>, block: &rustc_hir::Block<'tcx>, depth: usize) {
+    for stmt in block.stmts.iter().skip(1) {
+        if let Some(e) = stmt_expr(stmt) {
+            visit(cx, e, depth);
+        }
+    }
+    if let Some(e) = block.expr {
+        visit(cx, e, depth);
+    }
+}
+
+fn visit_loop_body<'tcx>(cx: &LateContext<'tcx>, block: &rustc_hir::Block<'tcx>, depth: usize) {
     for stmt in block.stmts {
         if let Some(e) = stmt_expr(stmt) {
             visit(cx, e, depth);
@@ -160,11 +184,11 @@ fn visit_loop_body<'tcx>(cx: &LateContext<'tcx>, block: &'tcx rustc_hir::Block<'
     }
 }
 
-fn visit_block<'tcx>(cx: &LateContext<'tcx>, block: &'tcx rustc_hir::Block<'tcx>, depth: usize) {
+fn visit_block<'tcx>(cx: &LateContext<'tcx>, block: &rustc_hir::Block<'tcx>, depth: usize) {
     visit_loop_body(cx, block, depth);
 }
 
-fn stmt_expr<'tcx>(stmt: &'tcx Stmt<'tcx>) -> Option<&'tcx Expr<'tcx>> {
+fn stmt_expr<'a, 'tcx>(stmt: &'a Stmt<'tcx>) -> Option<&'a Expr<'tcx>> {
     match stmt.kind {
         StmtKind::Expr(e) => Some(e),
         StmtKind::Let(local) => local.init,
@@ -174,8 +198,22 @@ fn stmt_expr<'tcx>(stmt: &'tcx Stmt<'tcx>) -> Option<&'tcx Expr<'tcx>> {
 }
 
 impl<'tcx> LateLintPass<'tcx> for MaxNestingDepth {
-    fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
-        visit(cx, expr, 0);
+    /// Walk each function body once, from the top.
+    ///
+    /// Walking from every expression (`check_expr`) would re-count the same
+    /// subtree from every node it contains, so the same `match` would be
+    /// measured both as a nested level and as a fresh root — inflating the
+    /// depth. One traversal per body keeps the number honest.
+    fn check_fn(
+        &mut self,
+        cx: &LateContext<'tcx>,
+        _kind: rustc_hir::intravisit::FnKind<'tcx>,
+        _decl: &'tcx rustc_hir::FnDecl<'tcx>,
+        body: &'tcx rustc_hir::Body<'tcx>,
+        _span: rustc_span::Span,
+        _id: rustc_hir::def_id::LocalDefId,
+    ) {
+        visit(cx, body.value, 0);
     }
 }
 
