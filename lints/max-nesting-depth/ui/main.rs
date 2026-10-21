@@ -72,3 +72,46 @@ fn while_deep(items: &[u32]) -> usize {
     }
     sum
 }
+
+// `<expr>.await` desugars into a compiler-generated `match` wrapped in a
+// generator `loop`. Neither is nesting the source shows, so 4 real levels
+// plus an `await` must stay at depth 4 and not be reported.
+async fn await_is_not_a_level(a: bool, b: bool, c: bool, d: bool) -> u32 {
+    if a {
+        if b {
+            if c {
+                if d {
+                    let x = ready().await;
+                    return x;
+                }
+            }
+        }
+    }
+    0
+}
+
+async fn ready() -> u32 {
+    7
+}
+
+// Five real levels still report, `await` or not.
+async fn five_real_levels(
+    a: bool,
+    b: bool,
+    c: bool,
+    d: bool,
+    e: bool,
+) -> u32 {
+    if a {
+        if b {
+            if c {
+                if d {
+                    if e {
+                        return ready().await;
+                    }
+                }
+            }
+        }
+    }
+    0
+}

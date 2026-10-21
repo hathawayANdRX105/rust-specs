@@ -75,14 +75,30 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize, seen: &m
                 }
             }
         }
-        ExprKind::Match(scrut, arms, _) => {
-            let depth = depth + 1;
-            report(cx, expr, depth);
+        ExprKind::Match(scrut, arms, source) => {
+            // `<expr>.await` desugars into a `match` on the poll result. It
+            // is compiler-generated, so counting it would add a nesting
+            // level that the source does not show — every `await` inside a
+            // nested expression would inflate the depth.
+            let desugared = matches!(
+                source,
+                MatchSource::AwaitDesugar | MatchSource::TryDesugar(_)
+            );
+            let depth = if desugared { depth } else { depth + 1 };
+            if !desugared {
+                report(cx, expr, depth);
+            }
             // The scrutinee sits *beside* the `match`, not inside it.
             visit(cx, scrut, depth - 1, seen);
             for arm in arms {
                 if let Some(guard) = arm.guard {
                     visit(cx, guard, depth, seen);
+                }
+                // A desugared `match` (`await` / `?`) has compiler-generated
+                // arms that hold the generator's state machine. That machine
+                // wraps a `loop`, which is not nesting the user wrote.
+                if desugared {
+                    continue;
                 }
                 visit(cx, arm.body, depth, seen);
             }
@@ -109,6 +125,12 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize, seen: &m
                 }
             }
         }
+        // A closure body is walked by `check_fn` (which starts it at depth
+        // 0). Walking it here as well would measure the same code twice —
+        // once from the closure root and once with the depth of whatever
+        // encloses the closure — so the deeper of the two wins and the
+        // report is inflated.
+        ExprKind::Closure(..) => {}
         ExprKind::Block(block, _) => {
             visit_block(cx, block, depth, seen)
         }
@@ -274,5 +296,9 @@ impl Default for MaxNestingDepth {
 
 #[test]
 fn ui() {
-    dylint_testing::ui_test(env!("CARGO_PKG_NAME"), "ui");
+    // `async fn` needs edition 2018 or later; the ui harness compiles the
+    // source files standalone, so the edition has to be passed explicitly.
+    dylint_testing::ui::Test::src_base(env!("CARGO_PKG_NAME"), "ui")
+        .rustc_flags(["--edition=2024"])
+        .run();
 }

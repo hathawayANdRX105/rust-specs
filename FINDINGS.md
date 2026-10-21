@@ -6,25 +6,34 @@ Scans produced by rust-lints rules against the ferrite workspace.
 
 Whole-workspace scan, with the rule counting *visual* nesting:
 
-**89 hits.** The number came down from 274 as the rule was corrected:
+**39 hits.** The number came down from 274 as the rule was corrected:
 
 | Version | Hits | What was wrong |
 |---|---|---|
 | first | 274 | counted the `for`/`while` HIR desugaring and the `else if` chain |
 | for/else-if fixed | 96 | a `match` scrutinee and an `if` condition were counted as nested |
 | scrutinee fixed | 58 | a `while` was never counted (it is the `Loop` node itself) |
-| final | 89 | — (`while` now counts, so the number went up again) |
+| while counts again | 89 | — (`while` now counts, so the number went up again) |
+| visited set | 78 | the same HIR node was reached through two paths and counted twice |
+| while-let body | 71 | the `while let` body was skipped, and the loop counted twice around it |
+| closure skip | 64 | a closure body was walked twice: from `check_fn` and from its enclosing expression |
+| await desugar | 39 | `<expr>.await` desugars into a `Match` + generator `Loop`, both compiler-generated |
+
+Each drop came from removing a construct that is not nesting the source
+shows. The last one was the largest: every `await` inside a nested
+expression added a level, and async code is nested code.
 
 Top files:
 
 | File | Hits |
 |---|---|
-| crates/harness-tools/src/semsearch/rank.rs | 11 |
-| crates/ui-coding/src/state/store.rs | 10 |
-| crates/gateway-metering/src/estimate.rs | 7 |
-| crates/ui-coding/src/state/subscriptions.rs | 5 |
+| crates/ui-coding/src/state/store.rs | 7 |
 | crates/harness-tools/src/semsearch.rs | 5 |
-| crates/gateway-forward/src/pipeline.rs | 5 |
+| crates/gateway-forward/src/pipeline.rs | 4 |
+| crates/harness-llm/src/openai.rs | 3 |
+| crates/gateway-protocol-bridge/src/gemini.rs | 3 |
+| crates/gateway-metering/src/scanner.rs | 3 |
+| crates/gateway-metering/src/estimate.rs | 3 |
 
 Spot check of `semsearch/rank.rs:750` confirms real nesting:
 `while` -> `if` -> `for` -> `if` -> `if` = 5 levels.
@@ -34,10 +43,10 @@ Done so far: `semsearch/rank.rs` (11 hits) — PR #450, split into
 the new implementation over 20k generated inputs plus 32 hand-written edge
 cases and both agreed everywhere.
 
-Next candidates: `ui-coding/src/state/store.rs` (10),
-`gateway-metering/src/estimate.rs` (7),
-`ui-coding/src/state/subscriptions.rs` (5),
-`gateway-forward/src/pipeline.rs` (5).
+Next candidates: `ui-coding/src/state/store.rs` (7),
+`harness-tools/src/semsearch.rs` (5),
+`gateway-forward/src/pipeline.rs` (4),
+`harness-llm/src/openai.rs` (3).
 
 ## early-return-needs-no-else (2026-10-21)
 

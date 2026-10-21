@@ -26,5 +26,13 @@ LL | |                             sum += n;
 LL | |                         }
    | |_________________________^
 
-warning: 3 warnings emitted
+warning: control flow nesting exceeds 4 levels; extract a helper or use combinators
+  --> $DIR/main.rs:109:21
+   |
+LL | /                     if e {
+LL | |                         return ready().await;
+LL | |                     }
+   | |_____________________^
+
+warning: 4 warnings emitted
 

@@ -19,10 +19,17 @@ desugaring — `Match` + `Loop` + the `next()` `Match` — is not counted), and 
 visits every HIR node once, so a node reachable through two paths (a
 desugared `while let` body, for instance) is measured once.
 
+Compiler-generated constructs do not count as levels either. `<expr>.await`
+and `?` desugar into a `Match` (`MatchSource::AwaitDesugar` /
+`TryDesugar`) whose arms hold the generator's state machine; counting those
+would add a level the source does not show, so every `await` inside a nested
+expression would inflate the depth.
+
+`while let` bodies are followed into the desugared `if let`; a `while cond`
+body is followed past the desugared condition check.
+
 Reported depths have not been cross-checked against every HIR shape; treat a
-hit as a prompt to look, not as a verdict. `while let` bodies are followed
-into the desugared `if let`; a `while cond` body is followed past the
-desugared condition check.
+hit as a prompt to look, not as a verdict.
 
 ## Example
 
