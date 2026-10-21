@@ -20,7 +20,9 @@ visits every HIR node once, so a node reachable through two paths (a
 desugared `while let` body, for instance) is measured once.
 
 Reported depths have not been cross-checked against every HIR shape; treat a
-hit as a prompt to look, not as a verdict.
+hit as a prompt to look, not as a verdict. `while let` bodies are followed
+into the desugared `if let`; a `while cond` body is followed past the
+desugared condition check.
 
 ## Example
 

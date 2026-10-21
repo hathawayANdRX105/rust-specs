@@ -188,25 +188,20 @@ fn visit_while_body<'tcx>(
     depth: usize,
     seen: &mut HashSet<HirId>,
 ) {
-    let mut rest = block.stmts.iter();
-    if let Some(first) = rest.next()
-        && let Some(e) = stmt_expr(first)
+    // `while let pat = expr { body }` is
+    //   Loop { block { stmts: [], expr: Some(If(Let(..), body, break)) } }
+    // — the user's body is the `then` branch of that `if`, not a statement.
+    if let Some(tail) = block.expr
+        && let ExprKind::If(cond, then, _) = tail.kind
+        && matches!(cond.kind, ExprKind::Let(..))
     {
-        match e.kind {
-            // `while let`: the user's body is the arm that binds the pattern.
-            ExprKind::Match(_, arms, _) => {
-                for arm in arms {
-                    if !matches!(arm.pat.kind, PatKind::Wild) {
-                        visit(cx, arm.body, depth, seen);
-                    }
-                }
-            }
-            // `while cond`: the desugared `if !cond { break }` has no user body.
-            ExprKind::If(..) => {}
-            _ => visit(cx, e, depth, seen),
-        }
+        visit(cx, then, depth, seen);
+        return;
     }
-    for stmt in rest {
+    // `while cond { body }` is
+    //   Loop { block { stmts: [If(!cond, break)], expr: body } }
+    // — the first statement is the desugared condition check.
+    for stmt in block.stmts.iter().skip(1) {
         if let Some(e) = stmt_expr(stmt) {
             visit(cx, e, depth, seen);
         }
