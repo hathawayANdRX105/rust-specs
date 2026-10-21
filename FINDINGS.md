@@ -2,28 +2,36 @@
 
 Scans produced by rust-lints rules against the ferrite workspace.
 
-## max-nesting-depth (2026-10-21)
+## max-nesting-depth (2026-10-21, after the depth fix)
 
-Scan: `cargo +nightly-2026-08-20 dylint --path ... --pattern 'lints/*' --all -- -p coding-harness-session`
+Whole-workspace scan, after counting *visual* nesting (a `for`/`while` is one
+level, an `else if` chain is one level):
 
-| Location | Shape |
+**96 hits** (the first version of the rule reported 274 because it counted
+the `for`/`while` HIR desugaring and the `else if` chain).
+
+| File | Hits |
 |---|---|
-| crates/harness-compaction/src/controller.rs:389 | >4 nested control flow |
-| crates/harness-compaction/src/reassembly.rs:336 | >4 nested control flow |
-| crates/harness-compaction/src/reassembly.rs:353 | >4 nested control flow |
-| crates/harness-compaction/src/reassembly.rs:355 | >4 nested control flow |
-| crates/harness-agent-loop/src/hygiene/pattern.rs:21 | >4 nested control flow |
-| crates/harness-agent-loop/src/hygiene/pattern.rs:25 | >4 nested control flow |
-| crates/harness-agent-loop/src/hygiene/pattern.rs:26 | >4 nested control flow |
-| crates/harness-agent-loop/src/hygiene/pattern.rs:29 | >4 nested control flow |
-| crates/harness-agent-loop/src/runtime/compaction_bridge.rs:78 | >4 nested control flow |
-| crates/harness-agent-loop/src/runtime/mod.rs:626 | >4 nested control flow |
+| crates/api-mcp/src/mcp_dispatch.rs | 19 |
+| crates/ui-coding/src/state/store.rs | 8 |
+| crates/ui-coding/src/state/subscriptions.rs | 7 |
+| crates/gateway-forward/src/pipeline.rs | 6 |
+| crates/harness-tools/src/semsearch/rank.rs | 4 |
+| crates/api-mcp/src/mcp_service.rs | 4 |
 
-Candidate for a future refactor PR: flatten with combinators / helper extraction.
+The rest are spread over ~40 files with 1-3 hits each. Spot checks of the
+survivors show real nesting (match arms inside match arms inside a `match`
+result), so the number is actionable.
+
+Candidate for a future refactor PR: flatten with combinators / helper
+extraction, starting with `mcp_dispatch.rs`.
 
 ## early-return-needs-no-else (2026-10-21)
 
-Scan: same command. No hits in coding-harness-session closure; pattern absent.
+Whole-workspace scan: **1 hit** —
+`crates/gateway-metering/src/estimate.rs:80`. The rule originally also fired
+on an `else if` chain (a false positive); fixed in commit 29cbd44, and the
+remaining hit is a genuine `if c == '"' { break; } else { .. }`.
 
 ## ferrite CI: overview_wire_contract flake (2026-10-21)
 
