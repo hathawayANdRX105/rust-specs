@@ -7,6 +7,10 @@ examples), and `ui/` (snapshot tests).
 Rules here cover what clippy cannot express, e.g. checks that need type info,
 project-specific style rules, or readability/nesting policies.
 
+## Specs
+
+本仓库同时维护一份规范库（`specs/`）：把 GitHub issue / PR 的格式检查翻译成 agent 可直接照做的检查清单与好坏例子。dylint 管语法，xtask 管特殊检查（如 GitHub issue/PR 格式）。入口见 [specs/README.md](specs/README.md)。
+
 ## Rules
 
 | Lint | What it detects | Status |
