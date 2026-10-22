@@ -198,31 +198,27 @@ fn for_user_body<'a, 'tcx>(stmts: &'a [Stmt<'tcx>]) -> Option<&'a Expr<'tcx>> {
 
 /// A `while` body.
 ///
-/// `while cond { .. }` desugars to `loop { if !cond { break } .. }` and
-/// `while let pat = expr { .. }` to `loop { match expr { pat => body, _ => break } }`.
-/// In both cases the first statement is the desugaring, and the user's body
-/// lives inside it — so walk that arm, not the raw statement (walking the
-/// raw statement would count the desugared `match`/`if` as a level and
-/// measure the user's body twice).
+/// Both `while let pat = expr { .. }` and `while cond { .. }` desugar to a
+/// `Loop` whose block has no user statements and whose tail expression is the
+/// compiler-generated condition check:
+///   - `while let`  : Loop { stmts: [], expr: If(Let(..), body, break) }
+///   - `while cond` : Loop { stmts: [], expr: If(cond, body, break) }
+/// In both cases the user's body is the `then` branch of that `if`; the `if`
+/// itself is the desugared condition check and must not count as a level.
 fn visit_while_body<'tcx>(
     cx: &LateContext<'tcx>,
     block: &rustc_hir::Block<'tcx>,
     depth: usize,
     seen: &mut HashSet<HirId>,
 ) {
-    // `while let pat = expr { body }` is
-    //   Loop { block { stmts: [], expr: Some(If(Let(..), body, break)) } }
-    // — the user's body is the `then` branch of that `if`, not a statement.
     if let Some(tail) = block.expr
-        && let ExprKind::If(cond, then, _) = tail.kind
-        && matches!(cond.kind, ExprKind::Let(..))
+        && let ExprKind::If(_, then, _) = tail.kind
     {
         visit(cx, then, depth, seen);
         return;
     }
-    // `while cond { body }` is
-    //   Loop { block { stmts: [If(!cond, break)], expr: body } }
-    // — the first statement is the desugared condition check.
+    // Fallback for any other HIR shape: walk statements and the tail
+    // expression.
     for stmt in block.stmts.iter().skip(1) {
         if let Some(e) = stmt_expr(stmt) {
             visit(cx, e, depth, seen);

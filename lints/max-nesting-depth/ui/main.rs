@@ -115,3 +115,21 @@ async fn five_real_levels(
     }
     0
 }
+
+// while 算 1 层：while -> if -> if -> if = 4 层，不应命中
+// （回归：普通 while 的 desugar 条件 If 不能计入层数）
+fn while_four(items: &[u32]) -> usize {
+    let mut sum = 0usize;
+    let mut i = 0usize;
+    while i < items.len() {
+        if i > 0 {
+            if i > 1 {
+                if i > 2 {
+                    sum += i;
+                }
+            }
+        }
+        i += 1;
+    }
+    sum
+}
