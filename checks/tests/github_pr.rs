@@ -143,6 +143,26 @@ fn too_few_checkboxes_fail_pr07() {
 }
 
 #[test]
+fn checked_checkboxes_count_for_pr07() {
+    // 合并前勾选后是 `- [x]`，PR-07 仍应统计数量（>0 且 >=2），不能因为全勾了就报 0 个框。
+    let body = r#"## Construction plan
+
+- [x] 第一项
+- [x] 第二项
+
+## Checklist
+
+- [x] 检查 A
+- [x] 检查 B
+"#;
+    let findings = check_body(body);
+    assert!(
+        !has_rule(&findings, "PR-07", Severity::Fail),
+        "PR-07 should pass when sections have 2 checked checkboxes: {findings:?}"
+    );
+}
+
+#[test]
 fn full_width_bracket_in_title_fails_pr16() {
     let findings = check_title("fix: 支持（括号）标题");
     assert!(

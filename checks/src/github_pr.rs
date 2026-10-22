@@ -4,7 +4,7 @@
 //! `Vec<Finding>`, so the CLI and the integration tests share the same code.
 
 use crate::util::{
-    Finding, Severity, contains_cjk, count_unchecked_checkboxes, extract_sections, has_type_label,
+    Finding, Severity, contains_cjk, count_checkboxes, extract_sections, has_type_label,
 };
 
 /// Required PR body sections (PR-03), order is not enforced.
@@ -133,7 +133,7 @@ pub fn check_body(body: &str) -> Vec<Finding> {
     // PR-07: Construction plan and Checklist each need at least two `- [ ]`.
     for section in ["Construction plan", "Checklist"] {
         if let Some((_, content)) = sections.iter().find(|(heading, _)| heading == section) {
-            let count = count_unchecked_checkboxes(content);
+            let count = count_checkboxes(content);
             if count < MIN_CHECKBOXES {
                 findings.push(Finding::new(
                     "PR-07",

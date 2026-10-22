@@ -4,7 +4,7 @@
 //! `Vec<Finding>`, so the CLI and the integration tests share the same code.
 
 use crate::util::{
-    Finding, Severity, contains_cjk, count_unchecked_checkboxes, extract_sections, has_type_label,
+    Finding, Severity, contains_cjk, count_checkboxes, extract_sections, has_type_label,
 };
 
 /// Required issue body sections (IS-01), order is not enforced.
@@ -97,7 +97,7 @@ pub fn check_body(body: &str) -> Vec<Finding> {
 
     // IS-04: the Done when section must contain at least one `- [ ]`.
     if let Some((_, content)) = sections.iter().find(|(heading, _)| heading == "Done when") {
-        if count_unchecked_checkboxes(content) == 0 {
+        if count_checkboxes(content) == 0 {
             findings.push(Finding::new(
                 "IS-04",
                 Severity::Fail,

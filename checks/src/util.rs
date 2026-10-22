@@ -81,11 +81,14 @@ pub fn extract_sections(body: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// Counts unchecked `- [ ]` checkboxes in `content`.
-pub fn count_unchecked_checkboxes(content: &str) -> usize {
+/// Counts all checkboxes (`- [ ]` unchecked or `- [x]` checked) in `content`.
+pub fn count_checkboxes(content: &str) -> usize {
     content
         .lines()
-        .filter(|line| line.trim_start().starts_with("- [ ]"))
+        .filter(|line| {
+            let t = line.trim_start();
+            t.starts_with("- [ ]") || t.starts_with("- [x]")
+        })
         .count()
 }
 
