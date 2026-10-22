@@ -267,10 +267,10 @@ fn report(findings: &[Finding]) -> ExitCode {
     }
 
     if failures == 0 {
-        println!("PASS: {} checks, 0 failures", findings.len());
+        println!("PASS: {} findings, 0 failures", findings.len());
         ExitCode::SUCCESS
     } else {
-        println!("FAIL: {} checks, {} failures", findings.len(), failures);
+        println!("FAIL: {} findings, {} failures", findings.len(), failures);
         ExitCode::from(1)
     }
 }
