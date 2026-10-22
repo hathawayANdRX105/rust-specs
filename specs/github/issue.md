@@ -2,7 +2,7 @@
 
 > 正本：ferrite `.githooks/spec/github/github_issues.yaml`
 > 适用：创建 issue / sub-issue、关闭 issue 前自查。
-> 规则 ID：IS-00 ~ IS-16（canon 在 `gh issue create` / `gh issue close` 时拦截）。
+> 规则 ID：IS-00 ~ IS-16（由 rust-specs 的 `cargo xtask check github-issue` 逐条检查；规则正本源自 canon 的 `github_issues.yaml`）。
 
 ## 检查清单
 
@@ -14,7 +14,7 @@
 
 ### 2. 正文小节（IS-01 FAIL / IS-06 FAIL / IS-07 FAIL）
 
-- [ ] 以下小节必须存在且按顺序出现（heading 一律英文）：
+- [ ] 以下小节必须存在（建议按模板顺序，heading 一律英文）：
 
   `Goal` → `Background` → `Done when` → `Suspected areas` → `Out of scope` → `How to observe success`
 
@@ -69,7 +69,7 @@
 
 ## Background
 
-目前标题语言检查（PR-01）已经接入 canon，但 `forbidden_brackets_in_title` 清单没有对应文档；全角括号只能靠人工 review 发现，容易漏到 main。
+目前标题语言检查（PR-01）已经接入 rust-specs，但 `forbidden_brackets_in_title` 清单没有对应文档；全角括号只能靠人工 review 发现，容易漏到 main。
 
 ## Done when
 
@@ -91,7 +91,7 @@
 
 1. 用含 `（` 的标题创建 PR，观察被拦截
 2. 用规范标题创建 PR，观察通过
-3. `canon pr check --body-file` 本地验证通过
+3. `cargo xtask check github-issue` 本地验证通过
 ~~~
 
 **为什么好：**

@@ -2,8 +2,8 @@
 
 > 正本：ferrite `.githooks/spec/github/github_pull_requests.yaml`、`github_pr_gates.yaml`、`.github/PULL_REQUEST_TEMPLATE.md`
 > 适用：创建 PR、更新 PR、合并 PR 前自查。
-> 规则 ID：PR-01 ~ PR-10（canon 在 `gh pr create` 时拦截），GT-* 合并门禁（`gh pr merge` 时拦截）。
-> 自查命令：正文写好后先跑 `canon pr check --body-file <正文>`，再 `gh pr create`。
+> 规则 ID：PR-01 ~ PR-16（由 rust-specs 的 `cargo xtask check github-pr` 逐条检查；规则正本源自 canon 的 `github_pull_requests.yaml`），GT-* 合并门禁（`gh pr merge` 时拦截）。
+> 自查命令：正文写好后先跑 `cd /home/hathaway/projects/rust-specs && cargo xtask check github-pr --title "<标题>" --body-file <正文>`（可选 `--labels`、`--branch`），再 `gh pr create`。
 
 ## 检查清单
 
@@ -20,7 +20,7 @@
 
 ### 3. 正文小节（PR-03 FAIL / PR-04 FAIL）
 
-- [ ] 以下小节必须存在且按顺序出现（heading 一律英文）：
+- [ ] 以下小节必须存在（建议按模板顺序，heading 一律英文）：
 
   `What` → `Why` → `Construction plan` → `Delivery record` → `How to test` → `Checklist`
 
@@ -37,7 +37,7 @@
 ### 5. type label（PR-06）
 
 - [ ] PR 必须挂至少 1 个 type label，取值限：`bug`、`enhancement`、`feature`、`documentation`、`chore`、`refactor`、`tests`、`epic`。
-- [ ] 标题/正文命中关键词但缺对应 label 时，canon 会 WARN 建议补挂：
+- [ ] 标题/正文命中关键词但缺对应 label 时，检查会 WARN 建议补挂：
 
   | 关键词 | 建议 label |
   |---|---|
@@ -95,7 +95,7 @@ Related #100
 ## Delivery record
 
 - Delivered: 标题括号检查已实现；`specs/github/pr.md` 已新增
-- Verification: `canon pr check --body-file` 本地通过；坏例被拦截
+- Verification: `cargo xtask check github-pr` 本地通过；坏例被拦截
 - Follow-up: none
 
 ## How to test
@@ -104,7 +104,7 @@ Related #100
 2. 用本 PR 的标题格式创建 PR，确认通过
 
 ```text
-canon pr check --body-file /tmp/pr-body.md
+cd /home/hathaway/projects/rust-specs && cargo xtask check github-pr --title "feat(gate): reject PR titles containing full-width brackets" --body-file /tmp/pr-body.md
 ```
 
 ## Checklist
