@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["lints/*", "checks"]
+members = ["lints/*", "checks", "support/*"]
 
 [workspace.package]
 version = "0.1.0"

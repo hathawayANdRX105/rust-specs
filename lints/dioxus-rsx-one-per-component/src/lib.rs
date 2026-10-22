@@ -5,6 +5,7 @@ extern crate rustc_hir;
 extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
+use dioxus_lint_scope::file_allowed;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_lint::{LateContext, LateLintPass, LintContext};
 use rustc_span::{BytePos, SourceFile, Span};
@@ -186,6 +187,9 @@ impl<'tcx> LateLintPass<'tcx> for DioxusRsxOnePerComponent {
                 continue;
             }
             if !text.contains("rsx") {
+                continue;
+            }
+            if !file_allowed(file) {
                 continue;
             }
             for finding in scan_source(text) {

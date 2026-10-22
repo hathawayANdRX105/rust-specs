@@ -279,6 +279,161 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
 
 [[package]]
+name = "dioxus-lint-scope"
+version = "0.1.0"
+
+[[package]]
+name = "dioxus-rsx"
+version = "0.7.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aea662c9e13a91279d8acbc0d02a80430c7081704c20e8c791e4c4a151268596"
+dependencies = [
+ "proc-macro2",
+ "proc-macro2-diagnostics",
+ "quote",
+ "rustversion",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "dioxus-rsx-scan"
+version = "0.1.0"
+dependencies = [
+ "dioxus-rsx",
+ "proc-macro2",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "dioxus_effect_self_loop"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
+name = "dioxus_globalsignal_discipline"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
+name = "dioxus_layer_direction"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
+name = "dioxus_ownership_imports"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
+name = "dioxus_props_contract"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
+name = "dioxus_rsx_avoid_control_flow"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dioxus-rsx",
+ "dioxus-rsx-scan",
+ "dylint_linting",
+ "dylint_testing",
+ "proc-macro2",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "dioxus_rsx_cjk_text"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dioxus-rsx",
+ "dylint_linting",
+ "dylint_testing",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "dioxus_rsx_list_key"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dioxus-rsx",
+ "dylint_linting",
+ "dylint_testing",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "dioxus_rsx_nesting"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dioxus-rsx",
+ "dylint_linting",
+ "dylint_testing",
+ "proc-macro2",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "dioxus_rsx_no_if_else"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dioxus-rsx",
+ "dioxus-rsx-scan",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
+name = "dioxus_rsx_one_per_component"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dylint_linting",
+ "dylint_testing",
+ "proc-macro2",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -759,6 +914,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro2-diagnostics"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af066a9c399a26e020ada66a034357a868728e72cd426f3adcd35f80d88d88c8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+ "version_check",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1138,6 +1305,12 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
+
+[[package]]
+name = "version_check"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "wasi"

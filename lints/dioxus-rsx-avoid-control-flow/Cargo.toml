@@ -1,8 +1,8 @@
 [package]
-name = "dioxus_rsx_no_rust_control_flow"
+name = "dioxus_rsx_avoid_control_flow"
 version = "0.1.0"
 authors = ["authors go here"]
-description = "ban Rust control flow (if/if-else, match, while, loop) inside rsx! bodies"
+description = "avoid match/while/loop and let blocks inside rsx! bodies (if is handled by dioxus-rsx-no-if-else)"
 edition = "2024"
 publish = false
 
@@ -11,7 +11,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "21baba9c10c5d179915cae82e6247bc2337872fb" }
+dioxus-lint-scope = { path = "../../support/dioxus-lint-scope" }
 dioxus-rsx = "0.7.10"
+dioxus-rsx-scan = { path = "../../support/dioxus-rsx-scan" }
 dylint_linting = "6.0"
 proc-macro2 = { version = "1", features = ["span-locations"] }
 syn = { version = "2", features = ["full", "visit"] }

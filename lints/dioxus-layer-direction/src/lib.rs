@@ -4,6 +4,7 @@
 extern crate rustc_hir;
 
 use clippy_utils::diagnostics::span_lint;
+use dioxus_lint_scope::span_allowed;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_hir::{Item, ItemKind};
 use rustc_lint::{LateContext, LateLintPass, LintContext};
@@ -56,6 +57,9 @@ fn is_server_crate(name: &str) -> bool {
 
 impl<'tcx> LateLintPass<'tcx> for DioxusLayerDirection {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
+        if !span_allowed(cx, item.span) {
+            return;
+        }
         let ItemKind::Use(path, _) = item.kind else {
             return;
         };
