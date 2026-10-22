@@ -1,0 +1,23 @@
+[package]
+name = "dioxus_rsx_no_rust_control_flow"
+version = "0.1.0"
+authors = ["authors go here"]
+description = "ban Rust control flow (if/if-else, match, while, loop) inside rsx! bodies"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "21baba9c10c5d179915cae82e6247bc2337872fb" }
+dioxus-rsx = "0.7.10"
+dylint_linting = "6.0"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+syn = { version = "2", features = ["full", "visit"] }
+
+[dev-dependencies]
+dylint_testing = "6.0"
+
+[package.metadata.rust-analyzer]
+rustc_private = true
