@@ -131,9 +131,7 @@ fn visit<'tcx>(cx: &LateContext<'tcx>, expr: &Expr<'tcx>, depth: usize, seen: &m
         // encloses the closure — so the deeper of the two wins and the
         // report is inflated.
         ExprKind::Closure(..) => {}
-        ExprKind::Block(block, _) => {
-            visit_block(cx, block, depth, seen)
-        }
+        ExprKind::Block(block, _) => visit_block(cx, block, depth, seen),
         _ => {}
     }
 }
