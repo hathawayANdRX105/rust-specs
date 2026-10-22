@@ -1,0 +1,20 @@
+[package]
+name = "dioxus_layer_direction"
+version = "0.1.0"
+authors = ["authors go here"]
+description = "web crate layering: components/layouts/utils must not depend on views; ui-* must not import server crates"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "21baba9c10c5d179915cae82e6247bc2337872fb" }
+dylint_linting = "6.0"
+
+[dev-dependencies]
+dylint_testing = "6.0"
+
+[package.metadata.rust-analyzer]
+rustc_private = true

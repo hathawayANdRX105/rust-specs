@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned toolchain
+        run: rustup toolchain install nightly-2026-08-20 --profile minimal --component rustc-dev --component llvm-tools-preview
+      - name: Install dylint-link
+        run: cargo install dylint-link --version 6.2.0 --locked
+      - name: Test
+        run: cargo test --workspace
