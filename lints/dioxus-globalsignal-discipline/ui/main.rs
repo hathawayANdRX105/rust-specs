@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // dioxus-lint-fixture
 // Clean: one documented static, no non-static GlobalSignal use.
 struct GlobalSignal<T>(T);

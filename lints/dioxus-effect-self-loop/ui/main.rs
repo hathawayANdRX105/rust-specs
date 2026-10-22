@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // dioxus-lint-fixture
 // Clean effect: reads a signal but never writes it.
 struct Signal<T>(T);

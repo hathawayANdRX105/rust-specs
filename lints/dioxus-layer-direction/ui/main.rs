@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // dioxus-lint-fixture
 // Clean: no reverse layering, no server-crate import.
 mod views {
