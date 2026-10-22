@@ -1,0 +1,36 @@
+warning: if-let body is a single expression; could be chained
+  --> $DIR/main.rs:5:5
+   |
+LL | /     if let Some(x) = v {
+LL | |         x.checked_add(1).is_some();
+LL | |     }
+   | |_____^
+   |
+   = note: `#[warn(chainable_single_statement)]` on by default
+
+warning: if-let body is a single expression; could be chained
+  --> $DIR/main.rs:12:5
+   |
+LL | /     if let Some(x) = v {
+LL | |         x.checked_add(1).ok_or(());
+LL | |     }
+   | |_____^
+
+warning: if-let body is a single expression; could be chained
+  --> $DIR/main.rs:19:5
+   |
+LL | /     if let Err(e) = res {
+LL | |         e > 3;
+LL | |     }
+   | |_____^
+
+warning: for-loop body is a single expression; could be chained
+  --> $DIR/main.rs:26:5
+   |
+LL | /     for x in xs {
+LL | |         println!("{x}");
+LL | |     }
+   | |_____^
+
+warning: 4 warnings emitted
+

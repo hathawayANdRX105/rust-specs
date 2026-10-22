@@ -33,6 +33,7 @@ cargo xtask check github-issue --title "<title>" --body-file <path> [--labels a,
 | `early-return-needs-no-else` | `if c { return/break/continue } else { .. }` → drop the `else` | ✅ implemented, ui-tested |
 | `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain | ✅ implemented, ui-tested |
 | `expect-in-non-result` | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable) | ✅ implemented, ui-tested |
+| `chainable-single-statement` | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each` | 🚧 detection-only (stats pending) |
 
 ## Dioxus rules
 
