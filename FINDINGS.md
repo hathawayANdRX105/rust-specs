@@ -86,3 +86,46 @@ Note: the scan needs `--workspace`; `cargo dylint` rejects multiple `-p` flags.
 `ui-components` must compile on the lint toolchain (nightly-2026-08-20) or the
 whole scan aborts — PR #448 fixed a raw identifier inside an rsx format string
 that broke exactly that.
+
+## max-nesting-depth (2026-10-22, while double-count fixed)
+
+A rule defect was found and fixed: `visit_while_body` only special-cased
+`while let`; a normal `while cond` desugars to `Loop { stmts: [], expr:
+If(cond, body, break) }`, and the desugared `If` was counted as a user level,
+making every `while` contribute 2 levels instead of 1 (contradicting the
+README). 8 of the 39 hits from the 2026-10-21 scan were false positives
+(`semsearch.rs` 5, `memory/recall.rs` 2, `web/parse.rs` 1); the remaining 31
+were real and were refactored in ferrite PR #457.
+
+Fix: `visit_while_body` now walks the `then` branch of `block.expr` when it is
+an `If` (same path for `while let` and `while cond`), and a regression case
+(`while` + 3 `if`s = visual depth 4, no report) was added to the ui test.
+
+Re-scan on ferrite main: **0 hits** for `max-nesting-depth`.
+
+## expect-in-non-result (2026-10-22, first scan)
+
+New rule: `.expect()` on `Result`/`Option` inside a function whose return type
+is not `Result`/`Option` (i.e. `?` is unavailable). Closures are skipped.
+
+Whole-workspace scan on ferrite main:
+
+**74 hits.** Top files:
+
+| File | Hits |
+|---|---|
+| crates/coding-harness-subagent/src/runtime.rs | 10 |
+| crates/coding-harness-subagent/src/acp_provider.rs | 9 |
+| crates/gateway-metering/src/ledger.rs | 6 |
+| crates/harness-daemon/src/runtime/state.rs | 5 |
+| crates/harness-tools/src/semsearch.rs | 4 |
+| crates/harness-daemon/src/runtime/dispatch.rs | 3 |
+| crates/gateway-proxy/src/manager.rs | 3 |
+| crates/coding-harness-subagent/src/acp.rs | 3 |
+
+`ban-unwrap`, `early-return-needs-no-else`, `consecutive-same-shape-loops`,
+`max-nesting-depth`: **0 hits** in the same scan.
+
+These are real hits (not yet refactored); each one is a candidate to make the
+function return `Result`/`Option` and use `?`, or to add
+`#[allow(expect_in_non_result)]` where returning `Result` is not appropriate.

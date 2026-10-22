@@ -1,0 +1,10 @@
+warning: `expect` is used in a function that does not return Result/Option; `?` is unavailable here
+  --> $DIR/main.rs:5:5
+   |
+LL |     v.expect("value must be present")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(expect_in_non_result)]` on by default
+
+warning: 1 warning emitted
+

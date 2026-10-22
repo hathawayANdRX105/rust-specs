@@ -11,7 +11,11 @@ project-specific style rules, or readability/nesting policies.
 
 | Lint | What it detects | Status |
 |---|---|---|
-| `ban-unwrap` | any bare `.unwrap()` on Result/Option; use `expect("reason")` or `?` | ✅ implemented, ui-tested |
+| `ban-unwrap` | any bare `.unwrap()` on Result/Option; use `expect("reason")` or `?`; expect messages must be English | ✅ implemented, ui-tested |
+| `max-nesting-depth` | `if`/`match`/`loop`/`for`/`while` nested deeper than 4 visual levels | ✅ implemented, ui-tested |
+| `early-return-needs-no-else` | `if c { return/break/continue } else { .. }` → drop the `else` | ✅ implemented, ui-tested |
+| `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain | ✅ implemented, ui-tested |
+| `expect-in-non-result` | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable) | ✅ implemented, ui-tested |
 
 ## Usage
 
