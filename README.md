@@ -1,6 +1,6 @@
-# rust-lints
+# rust-specs
 
-Custom Rust lint rules built on [dylint]. Each lint lives in its own directory
+Custom Rust syntax rules and spec checks built on [dylint]. Each lint lives in its own directory
 under `lints/`, with `src/lib.rs` (implementation), `README.md` (spec + good/bad
 examples), and `ui/` (snapshot tests).
 
@@ -23,7 +23,7 @@ Run all lints against a package in the ferrite repo:
 
 ```sh
 cargo +nightly-2026-08-20 dylint \
-  --path /home/hathaway/projects/rust-lints \
+  --path /home/hathaway/projects/rust-specs \
   --pattern 'lints/*' \
   --all \
   -- -p <crate>

@@ -1,6 +1,6 @@
 # Real-world findings (ferrite)
 
-Scans produced by rust-lints rules against the ferrite workspace.
+Scans produced by rust-specs rules against the ferrite workspace.
 
 ## max-nesting-depth (2026-10-21, after the depth fixes)
 
@@ -75,7 +75,7 @@ remaining hit is a genuine `if c == '"' { break; } else { .. }`.
 Full-workspace scan on ferrite main:
 
 ```text
-cargo +nightly-2026-08-20 dylint --path /home/hathaway/projects/rust-lints \
+cargo +nightly-2026-08-20 dylint --path /home/hathaway/projects/rust-specs \
   --pattern 'lints/*' --all --workspace
 ```
 
