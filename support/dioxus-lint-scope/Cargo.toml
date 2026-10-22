@@ -1,0 +1,15 @@
+[package]
+name = "dioxus-lint-scope"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+# rustc_private crates cannot be linked by the test harness; the lints'
+# integration tests cover the filtering behavior.
+test = false
+doctest = false
+
+[package.metadata.rust-analyzer]
+rustc_private = true

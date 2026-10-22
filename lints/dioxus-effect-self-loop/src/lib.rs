@@ -5,6 +5,7 @@ extern crate rustc_hir;
 extern crate rustc_middle;
 
 use clippy_utils::diagnostics::span_lint;
+use dioxus_lint_scope::span_allowed;
 use rustc_hir::def_id::DefId;
 use rustc_hir::intravisit::{self, Visitor};
 use rustc_hir::def::Res;
@@ -153,6 +154,9 @@ impl<'tcx> Visitor<'tcx> for SignalIo<'_, 'tcx> {
 
 impl<'tcx> LateLintPass<'tcx> for DioxusEffectSelfLoop {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
+        if !span_allowed(cx, expr.span) {
+            return;
+        }
         let ExprKind::Call(callee, args) = expr.kind else {
             return;
         };

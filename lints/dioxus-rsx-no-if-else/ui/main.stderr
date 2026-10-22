@@ -1,0 +1,16 @@
+warning: rsx 中禁止 if/if-else（FAIL 级）：把条件渲染移到 rsx 外，或抽成组件/插槽
+  --> $DIR/main.rs:7:13
+   |
+LL |             if show { span { "visible" } }
+   |             ^^
+   |
+   = note: `#[warn(dioxus_rsx_no_if_else)]` on by default
+
+warning: rsx 中禁止 if/if-else（FAIL 级）：把条件渲染移到 rsx 外，或抽成组件/插槽
+  --> $DIR/main.rs:8:13
+   |
+LL |             if show { span { "a" } } else { span { "b" } }
+   |             ^^
+
+warning: 2 warnings emitted
+

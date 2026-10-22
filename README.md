@@ -34,6 +34,29 @@ cargo xtask check github-issue --title "<title>" --body-file <path> [--labels a,
 | `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain | ✅ implemented, ui-tested |
 | `expect-in-non-result` | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable) | ✅ implemented, ui-tested |
 
+## Dioxus rules
+
+The dioxus rules parse rsx with `dioxus-rsx` 0.7 and only apply to `ui_*` /
+`web` crates (plus fixtures marked `dioxus-lint-fixture`).
+
+| Lint | What it detects | Default |
+|---|---|---|
+| `dioxus-rsx-no-if-else` | `if` / `if-else` as an rsx child — **FAIL via `-D dioxus_rsx_no_if_else`** | WARN |
+| `dioxus-rsx-avoid-control-flow` | `match` / `while` / `loop` / `{ let ... }` inside rsx (`for` allowed) | WARN |
+| `dioxus-rsx-nesting` | rsx element nesting deeper than one level | WARN |
+| `dioxus-rsx-one-per-component` | a `#[component]` body with more than one content `rsx!` | WARN |
+| `dioxus-rsx-cjk-text` | Chinese text inside rsx element bodies | WARN |
+| `dioxus-rsx-list-key` | `key: "{index}"` / `{i}` / `{idx}` array-index keys | WARN |
+| `dioxus-effect-self-loop` | `use_effect` writing a `Signal` it also reads | WARN |
+| `dioxus-globalsignal-discipline` | `GlobalSignal` static without a reason comment; non-static use | WARN |
+| `dioxus-props-contract` | `handle_*` props, `render_*` / `show_*: bool`, more than 7 fields | WARN |
+| `dioxus-layer-direction` | `components/layouts/utils` importing `views`; `ui_*` importing server crates | WARN |
+| `dioxus-ownership-imports` | `ui-components` importing `ui_api` / `app_contract` | WARN |
+
+Changed-files mode: set `DIOXUS_LINT_FILES` to a newline-separated list of
+repo-relative paths (e.g. `git diff --name-only`) to scan only those files;
+unset or empty scans everything.
+
 ## Usage
 
 Run all lints against a package in the ferrite repo:

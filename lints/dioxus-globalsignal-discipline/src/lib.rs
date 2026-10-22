@@ -6,6 +6,7 @@ extern crate rustc_middle;
 extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
+use dioxus_lint_scope::span_allowed;
 use rustc_hir::def::DefKind;
 use rustc_hir::{
     Expr, ExprKind, HirId, Item, ItemKind, LetStmt, QPath, Ty, TyKind,
@@ -104,6 +105,9 @@ fn inside_static(cx: &LateContext<'_>, hir_id: HirId) -> bool {
 
 impl<'tcx> LateLintPass<'tcx> for DioxusGlobalsignalDiscipline {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
+        if !span_allowed(cx, item.span) {
+            return;
+        }
         if !matches!(item.kind, ItemKind::Static(..)) {
             return;
         }
@@ -117,6 +121,9 @@ impl<'tcx> LateLintPass<'tcx> for DioxusGlobalsignalDiscipline {
     }
 
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
+        if !span_allowed(cx, expr.span) {
+            return;
+        }
         if inside_static(cx, expr.hir_id) {
             return;
         }
@@ -136,6 +143,9 @@ impl<'tcx> LateLintPass<'tcx> for DioxusGlobalsignalDiscipline {
     }
 
     fn check_local(&mut self, cx: &LateContext<'tcx>, local: &'tcx LetStmt<'tcx>) {
+        if !span_allowed(cx, local.span) {
+            return;
+        }
         let Some(ty) = local.ty else {
             return;
         };

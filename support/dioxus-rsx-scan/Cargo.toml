@@ -1,0 +1,18 @@
+[package]
+name = "dioxus-rsx-scan"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+test = false
+doctest = false
+
+[dependencies]
+dioxus-rsx = "0.7.10"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+syn = { version = "2", features = ["full", "visit"] }
+
+[package.metadata.rust-analyzer]
+rustc_private = true

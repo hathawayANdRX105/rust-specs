@@ -5,6 +5,7 @@ extern crate rustc_hir;
 extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
+use dioxus_lint_scope::span_allowed;
 use rustc_hir::def::Res;
 use rustc_hir::{Item, ItemKind, PrimTy, QPath, Ty, TyKind};
 use rustc_lint::{LateContext, LateLintPass};
@@ -93,6 +94,9 @@ fn field_problem(name: &str) -> Option<&'static str> {
 
 impl<'tcx> LateLintPass<'tcx> for DioxusPropsContract {
     fn check_item(&mut self, cx: &LateContext<'tcx>, item: &'tcx Item<'tcx>) {
+        if !span_allowed(cx, item.span) {
+            return;
+        }
         let ItemKind::Struct(ident, _, data) = item.kind else {
             return;
         };
