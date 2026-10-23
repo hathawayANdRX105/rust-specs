@@ -7,22 +7,51 @@ examples), and `ui/` (snapshot tests).
 Rules here cover what clippy cannot express, e.g. checks that need type info,
 project-specific style rules, or readability/nesting policies.
 
+## Layout
+
+| Path | Contents |
+|---|---|
+| `lints/` | dylint rules (Rust syntax and semantics that need type information) |
+| `checks/` | non-syntax checks (GitHub PR / issue format), run through `cargo xtask` |
+| `agents/` | per-project `AGENTS.md` assembly from TOML profiles |
+| `specs/` | human-readable rule specs, checklists, and good/bad examples |
+| `support/` | helper crates used by the dioxus lints |
+
 ## Specs
 
-本仓库同时维护一份规范库（`specs/`）：把 GitHub issue / PR 的格式检查翻译成 agent 可直接照做的检查清单与好坏例子。dylint 管语法，xtask 管特殊检查（如 GitHub issue/PR 格式）。入口见 [specs/README.md](specs/README.md)。
+This repository also maintains a spec library (`specs/`): GitHub issue / PR format checks
+translated into checklists an agent can follow directly, with good and bad examples. dylint
+owns syntax; xtask owns special checks (for example GitHub issue / PR format). Entry point:
+[specs/README.md](specs/README.md).
+
 ## Checks
 
-非语法类特殊检查放在 `checks/` crate，通过 `cargo xtask` alias 运行：
+Non-syntax checks live in the `checks/` crate and run through the `cargo xtask` alias:
 
 ```bash
 cargo xtask check github-pr --title "<title>" --body-file <path> [--labels a,b] [--branch <name>]
 cargo xtask check github-issue --title "<title>" --body-file <path> [--labels a,b]
 ```
 
-- `github-pr`：按 [specs/github/pr.md](specs/github/pr.md) 检查 PR 标题/正文（标题英文、conventional 前缀、必需小节、勾选框、type label、分支前缀）。
-- `github-issue`：按 [specs/github/issue.md](specs/github/issue.md) 检查 issue 标题/正文（标题中文、必需小节、Done when 勾选、禁用内容、type label）。
-- 不传 title/body 时自动用 `gh pr view` / `gh issue view` 读当前 PR/issue 补全。
-- 退出码：0 = 无 FAIL；1 = 有 FAIL；2 = gh 调用失败或参数错误。
+- `github-pr`: checks a PR title/body against [specs/github/pr.md](specs/github/pr.md) (English title, conventional prefix, required sections, checkboxes, type label, branch prefix).
+- `github-issue`: checks an issue title/body against [specs/github/issue.md](specs/github/issue.md) (Chinese title, required sections, Done when checkboxes, forbidden content, type label).
+- Without `--title` / `--body`, the current PR or issue is read through `gh pr view` / `gh issue view`.
+- Exit codes: 0 = no FAIL; 1 = at least one FAIL; 2 = `gh` call failed or bad arguments.
+
+## Agents
+
+Per-project `AGENTS.md` documents are assembled from TOML profiles by the `agents/` crate.
+Profiles live in `agents/profiles/<name>.toml` and declare ordered chapters made of small,
+individually addressable points — any chapter or point can be included, dropped, or reordered
+at render time. See [agents/README.md](agents/README.md).
+
+```bash
+cargo agents list
+cargo agents build ferrite                          # render to stdout
+cargo agents build ferrite --chapter code,testing   # free assembly
+cargo agents push ferrite                           # write the target file (stamped)
+cargo agents check ferrite                          # drift check
+```
 
 ## Rules
 
@@ -33,7 +62,7 @@ cargo xtask check github-issue --title "<title>" --body-file <path> [--labels a,
 | `early-return-needs-no-else` | `if c { return/break/continue } else { .. }` → drop the `else` | ✅ implemented, ui-tested |
 | `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain | ✅ implemented, ui-tested |
 | `expect-in-non-result` | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable) | ✅ implemented, ui-tested |
-| `chainable-single-statement` | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each` | 🚧 detection-only (stats pending) |
+| `chainable-single-statement` | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each` | ✅ implemented, ui-tested; adopted (detection-only, WARN) |
 
 ## Dioxus rules
 
@@ -65,14 +94,21 @@ scanned.
 
 ## Usage
 
-Run all lints against a package in the ferrite repo:
+Run every lint against the whole workspace (from the repository being checked):
 
 ```sh
 cargo +nightly-2026-08-20 dylint \
   --path /home/hathaway/projects/rust-specs \
   --pattern 'lints/*' \
-  --all \
-  -- -p <crate>
+  --all --workspace
+```
+
+Run the lints against a single crate:
+
+```sh
+cargo +nightly-2026-08-20 dylint --no-deps \
+  --path /home/hathaway/projects/rust-specs \
+  --pattern 'lints/*' -p <crate>
 ```
 
 Pin the toolchain in `rust-toolchain.toml` (currently `nightly-2026-08-20`).
