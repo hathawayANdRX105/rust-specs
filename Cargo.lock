@@ -351,6 +351,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dioxus_let_if_else"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dylint_linting",
+ "dylint_testing",
+ "proc-macro2",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "dioxus_ownership_imports"
 version = "0.1.0"
 dependencies = [
