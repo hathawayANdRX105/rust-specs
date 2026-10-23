@@ -400,6 +400,7 @@ dependencies = [
  "clippy_utils",
  "dioxus-lint-scope",
  "dioxus-rsx",
+ "dioxus-rsx-scan",
  "dylint_linting",
  "dylint_testing",
  "proc-macro2",
@@ -414,6 +415,7 @@ dependencies = [
  "clippy_utils",
  "dioxus-lint-scope",
  "dioxus-rsx",
+ "dioxus-rsx-scan",
  "dylint_linting",
  "dylint_testing",
  "proc-macro2",
@@ -428,6 +430,7 @@ dependencies = [
  "clippy_utils",
  "dioxus-lint-scope",
  "dioxus-rsx",
+ "dioxus-rsx-scan",
  "dylint_linting",
  "dylint_testing",
  "proc-macro2",
@@ -452,6 +455,7 @@ version = "0.1.0"
 dependencies = [
  "clippy_utils",
  "dioxus-lint-scope",
+ "dioxus-rsx-scan",
  "dylint_linting",
  "dylint_testing",
  "proc-macro2",
@@ -799,6 +803,7 @@ version = "0.1.0"
 dependencies = [
  "clippy_utils",
  "dioxus-lint-scope",
+ "dioxus-rsx-scan",
  "dylint_linting",
  "dylint_testing",
  "proc-macro2",
@@ -993,6 +998,7 @@ name = "redundant_branch_closures"
 version = "0.1.0"
 dependencies = [
  "clippy_utils",
+ "dioxus-rsx-scan",
  "dylint_linting",
  "dylint_testing",
  "proc-macro2",

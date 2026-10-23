@@ -83,7 +83,7 @@ fn check_raw_expr(node: &ExprNode, out: &mut Vec<Finding>) {
         };
         for statement in &statements {
             match statement {
-                syn::Stmt::Local(local) => out.push(finding(local.let_token.span, 3, LET_MSG)),
+                syn::Stmt::Local(local) => out.push(finding(local.let_token.span, LET_MSG.to_string())),
                 syn::Stmt::Expr(expr, _) => check_top_expr(expr, out),
                 syn::Stmt::Macro(_) | syn::Stmt::Item(_) => {}
             }
@@ -95,9 +95,9 @@ fn check_raw_expr(node: &ExprNode, out: &mut Vec<Finding>) {
 
 fn check_top_expr(expr: &syn::Expr, out: &mut Vec<Finding>) {
     match expr {
-        syn::Expr::Match(expr) => out.push(finding(expr.match_token.span, 5, MATCH_MSG)),
-        syn::Expr::While(expr) => out.push(finding(expr.while_token.span, 5, WHILE_MSG)),
-        syn::Expr::Loop(expr) => out.push(finding(expr.loop_token.span, 4, LOOP_MSG)),
+        syn::Expr::Match(expr) => out.push(finding(expr.match_token.span, MATCH_MSG.to_string())),
+        syn::Expr::While(expr) => out.push(finding(expr.while_token.span, WHILE_MSG.to_string())),
+        syn::Expr::Loop(expr) => out.push(finding(expr.loop_token.span, LOOP_MSG.to_string())),
         _ => {}
     }
 }
