@@ -129,3 +129,34 @@ Whole-workspace scan on ferrite main:
 These are real hits (not yet refactored); each one is a candidate to make the
 function return `Result`/`Option` and use `?`, or to add
 `#[allow(expect_in_non_result)]` where returning `Result` is not appropriate.
+
+## chainable-single-statement (2026-10-23)
+
+New detection-only rule: single-expression `if let` / `for` bodies that can be
+chained (`is_some_and` / `is_ok_and` / `is_err_and` / `for_each`). `let _ = ...`
+bodies are excluded by design: the `let _` is the explicit "ignore this result"
+signal, and folding it into `is_some_and(|x| ...is_ok())` hides the intent.
+
+Scan of ferrite main before cleanup: 373 raw candidates → 93 after
+specialization (if-let 26, for 67). jev (`decision-model-preview`) judged 20
+representative samples:
+
+- if-let + `let _` → **keep** (refactor p≈0.03–0.14): the explicit discard reads
+  better than a closure.
+- for single-call → **refactor** (p≈0.39–0.82).
+
+Based on that, `let _` detection was removed (if-let hits → 0) and the 64 for
+hits were cleaned up in three PRs:
+
+| PR | Scope | Rewrites |
+|---|---|---|
+| #503 | harness (llm/jobs/compaction/agent-loop/worker/tools/daemon) | 30 (incl. 2 cascades) |
+| #505 | gateway/api (proxy/dispatch/protocol-bridge/forward/api-gateway-state/api-billing) | 15 (incl. 1 cascade) |
+| #509 | coding/ui (terminal/store/subagent/session/ui-coding/ui-components/ui-feature-component) | 22 |
+
+Re-scan after merge (gated 6-rule scan): **0 hits** for
+`chainable-single-statement`, `expect-in-non-result`, `max-nesting-depth`,
+`ban-unwrap`, `early-return-needs-no-else`, `consecutive-same-shape-loops`.
+
+Note: the ferrite-ci gate now loads only the six adopted rules (PRs #45/#46/#47)
+so experimental rules in `lints/` cannot break the gate.
