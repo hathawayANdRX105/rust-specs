@@ -11,12 +11,12 @@ fn bad(c: bool) {
     let _ = rsx! { div {} };
 }
 
-// Good: pick_with keeps the choice in one expression.
+// Good: pick keeps the choice in one expression.
 #[cfg(any())]
 fn good_pick(c: bool) {
     let _ = rsx! {
         div {
-            { pick_with(c, || rsx! { span { "a" } }, || rsx! { span { "b" } }) }
+            { pick(c, rsx! { span { "a" } }, rsx! { span { "b" } }) }
         }
     };
 }
