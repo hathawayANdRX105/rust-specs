@@ -16,12 +16,13 @@ dylint_linting::declare_late_lint! {
     /// Bans hoisting an `if` / `if-else` whose branches build `rsx!` into a
     /// `let` binding.
     ///
-    /// Moving the branch out of rsx satisfies `dioxus-rsx-no-if-else` on a
-    /// technicality but keeps the component's view split into a branch block.
-    /// The project already has a single-expression form: use
-    /// `ui_util::pick::pick_with(cond, || rsx! { .. }, || rsx! { .. })` for
-    /// `Element` branches (lazy), or `ui_util::pick::pick(cond, a, b)` for
-    /// cheap `Copy` values.
+    /// The rule applies to every crate. Moving the branch out of rsx satisfies
+    /// `dioxus-rsx-no-if-else` on a technicality but keeps the component's view
+    /// split into a branch block. The project already has a single-expression
+    /// form: `ui_util::pick::pick(cond, rsx! { .. }, rsx! { .. })` for
+    /// `Element` branches, or `ui_util::pick::pick(cond, a, b)` for cheap
+    /// `Copy` values. Use `pick_with(cond, || .., || ..)` only when a branch
+    /// must stay lazy.
     ///
     /// ### Why is this bad?
     ///
@@ -48,16 +49,16 @@ dylint_linting::declare_late_lint! {
     /// ```rust
     /// rsx! {
     ///     div {
-    ///         { pick_with(show, || rsx! { span { "visible" } }, || rsx! {}) }
+    ///         { pick(show, rsx! { span { "visible" } }, rsx! {}) }
     ///     }
     /// }
     /// ```
-    pub DIOXUS_LET_IF_ELSE,
+    pub LET_IF_ELSE,
     Warn,
-    "rsx branches hoisted into a let-if-else; use pick_with / pick"
+    "rsx branches hoisted into a let-if-else; use pick / pick_with"
 }
 
-const MSG: &str = "不要把 rsx 分支 hoist 成 let-if-else：用 pick_with(cond, || rsx!{...}, || rsx!{...})（Element/惰性），cheap Copy 值用 pick(cond, a, b)";
+const MSG: &str = "不要把 rsx 分支 hoist 成 let-if-else：用 pick(cond, rsx!{...}, rsx!{...})；只有未选分支有副作用/集合遍历时才用 pick_with";
 
 /// One finding produced from source text (line/column are 1-based line and
 /// 0-based column, matching `proc_macro2`'s span-locations).
@@ -131,10 +132,6 @@ fn finding(span: Span, len: usize, msg: &str) -> Finding {
     }
 }
 
-fn is_ui_crate(name: &str) -> bool {
-    name.starts_with("ui_") || name == "web"
-}
-
 fn is_fixture(text: &str) -> bool {
     text.lines()
         .take(5)
@@ -160,35 +157,37 @@ fn span_for(file: &SourceFile, text: &str, finding: &Finding) -> rustc_span::Spa
     rustc_span::Span::with_root_ctxt(lo, hi)
 }
 
-impl<'tcx> LateLintPass<'tcx> for DioxusLetIfElse {
+impl<'tcx> LateLintPass<'tcx> for LetIfElse {
     fn check_crate_post(&mut self, cx: &LateContext<'tcx>) {
-        let crate_name = cx.tcx.crate_name(LOCAL_CRATE);
-        let scoped = is_ui_crate(crate_name.as_str());
         let source_map = cx.sess().source_map();
         for file in source_map.files().iter() {
+            // Only scan files that belong to the crate being linted: dependency
+            // sources are loaded for diagnostics but are not ours to police.
+            if file.cnum != LOCAL_CRATE {
+                continue;
+            }
             let Some(text) = file.src.as_deref().map(|text| text.as_str()) else {
                 continue;
             };
-            if !scoped && !is_fixture(text) {
-                continue;
-            }
             if !text.contains("rsx") {
                 continue;
             }
-            if !file_allowed(file) {
+            // UI fixtures are always scanned; everything else obeys the
+            // generated-icon and changed-files filters.
+            if !is_fixture(text) && !file_allowed(file) {
                 continue;
             }
             for finding in scan_source(text) {
                 let span = span_for(file, text, &finding);
-                span_lint(cx, DIOXUS_LET_IF_ELSE, span, finding.msg);
+                span_lint(cx, LET_IF_ELSE, span, finding.msg);
             }
         }
     }
 }
 
-impl Default for DioxusLetIfElse {
+impl Default for LetIfElse {
     fn default() -> Self {
-        DioxusLetIfElse
+        LetIfElse
     }
 }
 

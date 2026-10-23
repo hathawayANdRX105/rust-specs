@@ -1,7 +1,7 @@
-# dioxus-let-if-else
+# let-if-else
 
 Bans hoisting an `if` / `if-else` whose branches build `rsx!` into a `let`
-binding:
+binding. The rule applies to every crate:
 
 ```rust
 let node = if show {
@@ -18,14 +18,21 @@ split into a branch block. Use the project's single-expression helpers from
 
 ## Good
 
-For `Element` branches (lazy — only the selected closure runs):
+For `Element` branches, use `pick` directly:
 
 ```rust
 rsx! {
     div {
-        { pick_with(show, || rsx! { span { "visible" } }, || rsx! {}) }
+        { pick(show, rsx! { span { "visible" } }, rsx! {}) }
     }
 }
+```
+
+Use `pick_with` only when an unselected branch must not run (it has side
+effects or collects/iterates):
+
+```rust
+{ pick_with(show, || load_page(), || load_empty()) }
 ```
 
 For cheap `Copy` values (strings, variants, numbers):
@@ -44,7 +51,7 @@ through a branch before reaching the returned rsx.
 ## Division of labour
 
 - `dioxus-rsx-no-if-else` — an `if` written **inside** the `rsx!` body.
-- `dioxus-let-if-else` — the same branch hoisted **out** of rsx into a `let`.
+- `let-if-else` — the same branch hoisted **out** of rsx into a `let`.
 
 Both are active; neither reports the other's pattern. `for` inside rsx is
 allowed. `match` / `while` / `loop` / `{ let ... }` inside rsx are handled by
@@ -54,11 +61,10 @@ allowed. `match` / `while` / `loop` / `{ let ... }` inside rsx are handled by
 
 Source-text based; files that fail to parse are skipped. Only `let`
 initializers are inspected. Ordinary `let x = if ..` values without an `rsx!`
-branch are not reported. The lint scans `ui_*` / `web` crates (and fixtures
-marked `dioxus-lint-fixture`), skips generated `/icons/` paths, and honours
-`DIOXUS_LINT_FILES` for changed-files mode.
+branch are not reported. Generated `/icons/` paths are skipped, and
+`DIOXUS_LINT_FILES` still narrows the scan in changed-files mode.
 
 ## Severity
 
 Default `WARN`. After the existing hoists are cleaned up, merge can elevate it
-with `-D dioxus_let_if_else`.
+with `-D let_if_else`.
