@@ -16,8 +16,39 @@ structure; extract a child component or pass the fragment as a slot prop.
 
 ## Known problems
 
-The slot-wiring exception (`rsx!` in an `Option<Element>` prop value) is
-counted too; allow the lint with a written reason when intentional.
+Source-text based; files that fail to parse are skipped. Only **content**
+`rsx!` calls count:
+
+- a direct statement or tail expression: `rsx! { .. }` / `rsx! { .. };`
+- a direct `let` initializer: `let header = rsx! { .. };`
+- a direct `return`: `return rsx! { .. };`
+
+Fragments nested in `if`/`match` branches, loops, closures (`map`, `then`),
+prop values, or any other expression are **not** counted. Hoisting a
+conditional into `let node = if .. { rsx!{} } else { rsx!{} };` therefore does
+not trigger this lint.
+
+## Examples
+
+Good — one content rsx, the conditional fragment is not a content view:
+
+```rust
+#[component]
+fn Card(c: bool) -> Element {
+    let node = if c { rsx! { div { "a" } } } else { rsx! { div { "b" } } };
+    rsx! { div { {node} } }
+}
+```
+
+Bad — a direct `let` fragment plus the returned view (two content rsx):
+
+```rust
+#[component]
+fn Card() -> Element {
+    let header = rsx! { h1 { "title" } };
+    rsx! { div { {header} } }
+}
+```
 
 ## CI usage
 
