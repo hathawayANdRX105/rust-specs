@@ -56,7 +56,11 @@ The dioxus rules parse rsx with `dioxus-rsx` 0.7 and only apply to `ui_*` /
 
 Changed-files mode: set `DIOXUS_LINT_FILES` to a newline-separated list of
 repo-relative paths (e.g. `git diff --name-only`) to scan only those files;
-unset or empty scans everything.
+unset or empty scans everything. Generated icon modules are always excluded:
+any path containing `/icons/` (mainly
+`crates/ui-components/src/icons/**`) is skipped, even when it appears in the
+diff list. `bin/kit-demo` is outside the `ui_*` / `web` crate scope and is not
+scanned.
 
 ## Usage
 
