@@ -1,8 +1,8 @@
 [package]
-name = "dioxus_let_if_else"
+name = "redundant_branch_closures"
 version = "0.1.0"
 authors = ["authors go here"]
-description = "ban hoisting if/if-else with rsx branches into a let binding"
+description = "detect two no-arg closures used as both branches of a let-bound pick_with or if-else"
 edition = "2024"
 publish = false
 
@@ -11,7 +11,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "21baba9c10c5d179915cae82e6247bc2337872fb" }
-dioxus-lint-scope = { path = "../../support/dioxus-lint-scope" }
 dylint_linting = "6.0"
 proc-macro2 = { version = "1", features = ["span-locations"] }
 syn = { version = "2", features = ["full", "visit"] }

@@ -34,6 +34,8 @@ cargo xtask check github-issue --title "<title>" --body-file <path> [--labels a,
 | `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain | ✅ implemented, ui-tested |
 | `expect-in-non-result` | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable) | ✅ implemented, ui-tested |
 | `chainable-single-statement` | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each` | 🚧 detection-only (stats pending) |
+| `let-if-else` | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — use `pick` / `pick_with` | ✅ implemented, ui-tested |
+| `redundant-branch-closures` | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — use `pick(cond, a, b)` | ✅ implemented, ui-tested |
 
 ## Dioxus rules
 
@@ -43,7 +45,6 @@ The dioxus rules apply to `ui_*` / `web` crates (plus fixtures marked
 | Lint | What it detects | Default |
 |---|---|---|
 | `dioxus-rsx-no-if-else` | `if` / `if-else` as an rsx child — **FAIL via `-D dioxus_rsx_no_if_else`** | WARN |
-| `dioxus-let-if-else` | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — use `pick_with` / `pick` | WARN |
 | `dioxus-rsx-avoid-control-flow` | `match` / `while` / `loop` / `{ let ... }` inside rsx (`for` allowed) | WARN |
 | `dioxus-rsx-nesting` | rsx element nesting deeper than one level | WARN |
 | `dioxus-rsx-one-per-component` | a `#[component]` body with more than one content `rsx!` | WARN |

@@ -1,0 +1,10 @@
+warning: 不要把 rsx 分支 hoist 成 let-if-else：用 pick(cond, rsx!{...}, rsx!{...})；只有未选分支有副作用/集合遍历时才用 pick_with
+  --> $DIR/main.rs:5:16
+   |
+LL |     let node = if c {
+   |                ^^
+   |
+   = note: `#[warn(let_if_else)]` on by default
+
+warning: 1 warning emitted
+

@@ -1,0 +1,16 @@
+warning: 两个分支都是无参闭包且返回同一类型，闭包是多余的：用 pick(cond, a, b)
+  --> $DIR/main.rs:4:17
+   |
+LL |     let _node = pick_with(c, || 1, || 2);
+   |                 ^^^^^^^^^
+   |
+   = note: `#[warn(redundant_branch_closures)]` on by default
+
+warning: 两个分支都是无参闭包且返回同一类型，闭包是多余的：用 pick(cond, a, b)
+  --> $DIR/main.rs:10:17
+   |
+LL |     let _node = if c { || 1 } else { || 2 };
+   |                 ^^
+
+warning: 2 warnings emitted
+
