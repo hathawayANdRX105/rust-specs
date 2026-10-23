@@ -9,13 +9,12 @@ use dioxus_lint_scope::file_allowed;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_lint::{LateContext, LateLintPass, LintContext};
 use rustc_span::{BytePos, SourceFile, Span};
-use syn::visit::Visit;
 
 dylint_linting::declare_late_lint! {
     /// A `#[component]` function body must contain at most one content `rsx!`.
     ///
-    /// The returned rsx is the component's view. A second `rsx!` inside the
-    /// same body means the function is assembling multiple views inline;
+    /// The returned rsx is the component's view. A second content `rsx!` in
+    /// the same body means the function is assembling multiple views inline;
     /// extract a child component or pass the fragment as a slot prop.
     ///
     /// ### Why is this bad?
@@ -26,9 +25,13 @@ dylint_linting::declare_late_lint! {
     ///
     /// ### Known problems
     ///
-    /// Source-text based; files that fail to parse are skipped. The slot-wiring
-    /// exception (an `rsx!` in an `Option<Element>` prop value) is counted too;
-    /// allow the lint with a written reason when that is intentional.
+    /// Source-text based; files that fail to parse are skipped. Only content
+    /// `rsx!` calls count: a direct statement/tail expression, a direct
+    /// `let x = rsx! { .. };`, or a direct `return rsx! { .. };`. Fragments
+    /// nested in `if`/`match` branches, loops, closures (`map`, `then`), prop
+    /// values, or any other expression are not counted — hoisting a
+    /// conditional into `let node = if .. { rsx!{} } else { rsx!{} };` does
+    /// not trigger this lint.
     ///
     /// ### Example
     ///
@@ -110,29 +113,52 @@ fn check_fn(
     }
 }
 
-#[derive(Default)]
-struct RsxCounter {
-    count: usize,
+/// Count content `rsx!` calls only.
+///
+/// Content calls are the ones that make up the component's view:
+/// - a direct statement or tail expression: `rsx! { .. }` / `rsx! { .. };`
+/// - a direct `let` initializer: `let header = rsx! { .. };`
+/// - a direct `return`: `return rsx! { .. };`
+///
+/// Fragments nested in `if`/`match` branches, loops, closures (`map`,
+/// `then`), prop values, or any other expression are not content views and
+/// are skipped. This keeps `let node = if c { rsx!{} } else { rsx!{} };`
+/// compatible with the one-content-rsx rule.
+fn count_rsx(block: &syn::Block) -> usize {
+    block
+        .stmts
+        .iter()
+        .filter(|stmt| stmt_is_content_rsx(stmt))
+        .count()
 }
 
-impl<'ast> Visit<'ast> for RsxCounter {
-    fn visit_macro(&mut self, mac: &'ast syn::Macro) {
-        if mac
-            .path
-            .segments
-            .last()
-            .is_some_and(|segment| segment.ident == "rsx")
-        {
-            self.count += 1;
-        }
-        syn::visit::visit_macro(self, mac);
+fn stmt_is_content_rsx(stmt: &syn::Stmt) -> bool {
+    match stmt {
+        syn::Stmt::Expr(expr, _) => match expr {
+            syn::Expr::Macro(mac) => is_rsx_macro(&mac.mac),
+            syn::Expr::Return(ret) => ret.expr.as_deref().is_some_and(expr_is_direct_rsx),
+            _ => false,
+        },
+        // A bare `rsx! { .. }` statement is parsed as `Stmt::Macro`, not
+        // `Stmt::Expr(Expr::Macro)`.
+        syn::Stmt::Macro(stmt_macro) => is_rsx_macro(&stmt_macro.mac),
+        syn::Stmt::Local(local) => local
+            .init
+            .as_ref()
+            .is_some_and(|init| init.diverge.is_none() && expr_is_direct_rsx(&init.expr)),
+        _ => false,
     }
 }
 
-fn count_rsx(block: &syn::Block) -> usize {
-    let mut counter = RsxCounter::default();
-    counter.visit_block(block);
-    counter.count
+fn expr_is_direct_rsx(expr: &syn::Expr) -> bool {
+    matches!(expr, syn::Expr::Macro(mac) if is_rsx_macro(&mac.mac))
+}
+
+fn is_rsx_macro(mac: &syn::Macro) -> bool {
+    mac.path
+        .segments
+        .last()
+        .is_some_and(|segment| segment.ident == "rsx")
 }
 
 fn finding(span: proc_macro2::Span, len: usize, msg: String) -> Finding {
@@ -233,6 +259,54 @@ fn Card() -> Element {
 fn Card() -> Element {
     let header = rsx! { h1 { "title" } };
     rsx! { div { {header} } }
+}
+"#;
+        assert!(!scan_source(source).is_empty());
+    }
+
+    #[test]
+    fn ignores_conditional_fragment() {
+        let source = r#"
+#[component]
+fn Card(c: bool) -> Element {
+    let node = if c { rsx! { div { "a" } } } else { rsx! { div { "b" } } };
+    rsx! { div { {node} } }
+}
+"#;
+        assert!(scan_source(source).is_empty());
+    }
+
+    #[test]
+    fn ignores_closure_fragment() {
+        let source = r#"
+#[component]
+fn Card(items: Vec<u8>) -> Element {
+    let nodes = items.iter().map(|x| rsx! { div { {x} } });
+    rsx! { div { {nodes} } }
+}
+"#;
+        assert!(scan_source(source).is_empty());
+    }
+
+    #[test]
+    fn flags_direct_let_fragment() {
+        let source = r#"
+#[component]
+fn Card() -> Element {
+    let header = rsx! { h1 { "title" } };
+    rsx! { div { {header} } }
+}
+"#;
+        assert!(!scan_source(source).is_empty());
+    }
+
+    #[test]
+    fn flags_two_top_level_rsx() {
+        let source = r#"
+#[component]
+fn Card() -> Element {
+    rsx! { div { "a" } }
+    rsx! { div { "b" } }
 }
 "#;
         assert!(!scan_source(source).is_empty());
