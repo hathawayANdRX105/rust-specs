@@ -6,10 +6,13 @@ publish = false
 
 [lib]
 path = "src/lib.rs"
-# rustc_private crates cannot be linked by the test harness; the lints'
-# integration tests cover the filtering behavior.
+# rustc_private crates cannot be linked by the test harness; the pure path
+# predicates (and their tests) live in `dioxus-lint-paths`.
 test = false
 doctest = false
+
+[dependencies]
+dioxus-lint-paths = { path = "../dioxus-lint-paths" }
 
 [package.metadata.rust-analyzer]
 rustc_private = true

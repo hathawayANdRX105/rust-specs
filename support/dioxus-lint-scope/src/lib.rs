@@ -4,6 +4,7 @@
 extern crate rustc_lint;
 extern crate rustc_span;
 
+use dioxus_lint_paths::{is_generated_icon_path, matches_file_list};
 use rustc_lint::{LateContext, LintContext};
 use rustc_span::{FileName, SourceFile, Span};
 use std::path::Path;
@@ -15,9 +16,15 @@ use std::sync::OnceLock;
 /// (the output of `git diff --name-only`). When it is unset or empty every
 /// file is scanned. Matching is suffix-based: a file passes when its path
 /// ends with one of the listed entries.
+///
+/// Generated icon modules are always skipped, even when they appear in the
+/// diff list: they are machine-generated SVG wrappers, not hand-written rsx.
 pub fn should_scan(path: &Path) -> bool {
+    if is_generated_icon_path(path) {
+        return false;
+    }
     match file_list() {
-        Some(list) => matches(path, list),
+        Some(list) => matches_file_list(path, list),
         None => true,
     }
 }
@@ -33,13 +40,6 @@ fn file_list() -> &'static Option<Vec<String>> {
                 .collect()
         })
     })
-}
-
-fn matches(path: &Path, list: &[String]) -> bool {
-    if list.is_empty() {
-        return true;
-    }
-    list.iter().any(|entry| path.ends_with(Path::new(entry)))
 }
 
 /// Filter a source-file scan loop (the `source_map().files()` style lints).
@@ -58,37 +58,5 @@ pub fn span_allowed<'tcx>(cx: &LateContext<'tcx>, span: Span) -> bool {
     match &loc.file.name {
         FileName::Real(name) => name.local_path().map(should_scan).unwrap_or(true),
         _ => true,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-
-    fn entry(path: &str) -> String {
-        path.to_owned()
-    }
-
-    #[test]
-    fn empty_list_scans_everything() {
-        assert!(matches(Path::new("/repo/crates/ui-x/src/a.rs"), &[]));
-    }
-
-    #[test]
-    fn suffix_matches_repo_relative_paths() {
-        let path = Path::new("/repo/crates/ui-x/src/a.rs");
-        assert!(matches(path, &[entry("crates/ui-x/src/a.rs")]));
-        assert!(matches(path, &[entry("src/a.rs")]));
-        assert!(!matches(path, &[entry("crates/ui-y/src/a.rs")]));
-    }
-
-    #[test]
-    fn any_entry_matches() {
-        let path = Path::new("/repo/crates/ui-x/src/a.rs");
-        assert!(matches(
-            path,
-            &[entry("crates/ui-y/src/a.rs"), entry("crates/ui-x/src/a.rs")]
-        ));
     }
 }
