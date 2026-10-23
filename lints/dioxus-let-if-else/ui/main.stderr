@@ -1,0 +1,10 @@
+warning: 不要把 rsx 分支 hoist 成 let-if-else：用 pick_with(cond, || rsx!{...}, || rsx!{...})（Element/惰性），cheap Copy 值用 pick(cond, a, b)
+  --> $DIR/main.rs:5:16
+   |
+LL |     let node = if c {
+   |                ^^
+   |
+   = note: `#[warn(dioxus_let_if_else)]` on by default
+
+warning: 1 warning emitted
+

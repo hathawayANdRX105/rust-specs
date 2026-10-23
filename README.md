@@ -37,12 +37,13 @@ cargo xtask check github-issue --title "<title>" --body-file <path> [--labels a,
 
 ## Dioxus rules
 
-The dioxus rules parse rsx with `dioxus-rsx` 0.7 and only apply to `ui_*` /
-`web` crates (plus fixtures marked `dioxus-lint-fixture`).
+The dioxus rules apply to `ui_*` / `web` crates (plus fixtures marked
+`dioxus-lint-fixture`). The rsx-structure rules parse rsx with `dioxus-rsx` 0.7.
 
 | Lint | What it detects | Default |
 |---|---|---|
 | `dioxus-rsx-no-if-else` | `if` / `if-else` as an rsx child — **FAIL via `-D dioxus_rsx_no_if_else`** | WARN |
+| `dioxus-let-if-else` | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — use `pick_with` / `pick` | WARN |
 | `dioxus-rsx-avoid-control-flow` | `match` / `while` / `loop` / `{ let ... }` inside rsx (`for` allowed) | WARN |
 | `dioxus-rsx-nesting` | rsx element nesting deeper than one level | WARN |
 | `dioxus-rsx-one-per-component` | a `#[component]` body with more than one content `rsx!` | WARN |
