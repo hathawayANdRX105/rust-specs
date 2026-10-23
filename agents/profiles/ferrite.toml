@@ -1,0 +1,453 @@
+# ferrite AGENTS profile — assembled by the rust-specs `agents` tool.
+#
+# Structure: six chapters; each chapter holds small, individually
+# addressable points ("items"). Any chapter or item can be included,
+# dropped, or reordered at render time:
+#
+#   cargo agents build ferrite                          # everything
+#   cargo agents build ferrite --chapter code,testing   # two chapters
+#   cargo agents build ferrite --drop code.lsp          # minus one point
+#   cargo agents push ferrite                           # write AGENTS.md
+#
+# Language is English by decision (2026-10-23): the consuming repo reads
+# this file at every session start and English keeps it searchable
+# together with the code.
+
+[profile]
+name = "ferrite"
+title = "ferrite conventions"
+repo = "ferrite"          # resolved against AGENTS_PROJECTS_BASE (default ~/projects)
+file = "AGENTS.md"
+include_chapters = ["project", "environment", "code", "testing", "wrapup", "cautions"]
+
+[profile.preamble]
+text = '''
+ferrite is an LLM gateway + admin plane + agent runtime monorepo in Rust.
+The crate manifest in the root `README.md` is the single source of truth
+for module responsibilities. This file carries hard constraints and the
+order of operations; expanded procedures live under `.agent/rules/` —
+look them up when needed instead of reading them end to end.
+'''
+
+[[profile.preamble.table]]
+caption = 'Common entry points — prefer these over hand-rolled commands:'
+headers = ["Purpose", "Command"]
+rows = [
+  ["Environment checkup", "`just dev-check`"],
+  ["Start / update / inspect the shared backend", "`just dev-backend start` / `update` / `status`"],
+  ["Start the web frontend (debug variant for dev login)", "`just dev-web` / `just dev-web debug`"],
+  ["Local tests (the only local test entry)", "`just test-fast`"],
+  ["Full check suite (fmt + clippy + check + gates)", "`just verify`"],
+  ["Spec gates", "`just gate` / `cargo xtask check`"],
+  ["Worktree cleanup (only reclaimable ones)", "`just wt-candidates` → `just wt-clean`"],
+]
+
+[[profile.preamble.table]]
+caption = 'Which document to read:'
+headers = ["Scenario", "Read"]
+rows = [
+  ["Rust public API / code style / investigation and review", "`.agent/rules/conventions.md`"],
+  ["PR work / subagents / the full worktree flow", "`.agent/rules/pr-workflow.md`"],
+  ["Writing / running tests, CI policy", "`.agent/rules/testing-ci.md`"],
+  ["Blocked by a gate / looking up a rule", "`.agent/rules/gates.md`"],
+  ["Backend / database / frontend / process hygiene", "`.agent/rules/dev-env.md`"],
+  ["Task orchestration / ownership matrix", "`.agent/rules/workflow-state.md`"],
+  ["How `.agent/` is organized", "`.agent/README.md`"],
+]
+
+# ---------------------------------------------------------------------------
+
+[[chapter]]
+id = "project"
+title = "Understand the project first"
+
+[[chapter.item]]
+id = "read-order"
+title = "Read these first (five minutes to a global picture)"
+numbered = [
+  "Root `README.md` crate manifest — the **single source of truth** for module responsibilities; per-crate responsibility lives in the cratebook sources under `docs/cratebook/`.",
+  "Root `Cargo.toml` `[workspace.lints.clippy]` — the idiom lints this repo denies; skim before writing code so you do not run into them.",
+  "Root `checks.toml` — spec policy: which paths each rule covers, severities, the semantic-layer endpoint.",
+  "`.agent/rules/` — the rule bodies; follow the navigation table above instead of reading everything.",
+]
+
+[[chapter.item]]
+id = "cratebook"
+title = "Read the cratebook before choosing where to implement"
+text = '''
+`docs/cratebook-<layer>.md` (one per layer: api, app, bin, coding, gateway,
+harness, tests, ui) is the single source of truth for code placement: each
+layer's crate table, its `does_not_belong` boundaries, and its entry points.
+`docs/cratebook-files-<layer>.md` adds per-crate file responsibilities and
+belongs lists.
+'''
+bullets = [
+  "Find the owning crate in the cratebook before writing code — it answers \"where does this belong\" faster than searching the tree.",
+  "Check the dependency column and the where-to-implement index before adding a new internal dependency or moving logic between crates.",
+  "The md documents are both the docs and the editable source: if a responsibility text is stale, edit it directly in `cratebook-files-<layer>.md` and regenerate at wrap-up.",
+]
+[[chapter.item]]
+id = "discovery-commands"
+title = "Commands that answer questions"
+[[chapter.item.table]]
+headers = ["Question", "Tool"]
+rows = [
+  ["Workspace members and their declared dependencies", "`cargo metadata --no-deps --format-version 1`"],
+  ["Which features a crate actually compiles with", "`cargo tree -p <crate> -e features`"],
+  ["A symbol's type / signature / implementation", "**LSP** (rust-glancer): `hover` / `goToDefinition` / `findReferences`"],
+  ["Structure and blast radius", "`codegraph sync` to refresh the index; `codegraph impact <symbol>` / `codegraph callers <symbol>` for callers and affected code"],
+  ["Locating code by content", "search tools by symbol / string — never page through directories by hand"],
+]
+
+[[chapter.item]]
+id = "layering"
+title = "Layering red lines (know which layer you are standing on before you write)"
+bullets = [
+  "Dependencies point one way: `crates/*` never depend on each other sideways; cross-domain data goes through `crates/app-contract/` only; `bin/**` is process assembly and holds no business logic.",
+  "`crates/` exposes library APIs only; process assembly belongs in `bin/`; contract tests in `tests/`.",
+  "Before changing a public symbol, list every caller with `findReferences` first.",
+]
+
+[[chapter.item]]
+id = "files-to-watch"
+title = "Files that need extra care"
+bullets = [
+  "`README.md` / `Cargo.toml`: adding or moving a crate means updating both (the README manifest is the responsibility record).",
+  "`checks.toml`: spec policy — changing it changes rule semantics, which is a maintainer decision.",
+  "`.githooks/spec/custom/`: project-owned assets (UI contracts and similar); do not edit them as if they were rule files.",
+  "`todo/`: local task briefs and audit notes (gitignored, never committed) — the deliverable is a PR, not a todo file.",
+]
+
+# ---------------------------------------------------------------------------
+
+[[chapter]]
+id = "environment"
+title = "Prepare the development environment"
+
+[[chapter.item]]
+id = "worktree"
+title = "One task, one worktree"
+code.lang = "bash"
+code.text = '''
+cd ~/projects/ferrite
+git worktree add .wt/<name> -b <type>/<slug>     # type: feat/fix/chore/refactor/epic/release
+'''
+bullets = [
+  "Never run `git worktree add` from inside a worktree — it nests. If `git worktree list` shows a second `.wt/`, stop and start over.",
+  "Push the branch immediately after creating it (`git push -u origin <type>/<slug>`): otherwise the upstream may point at main or someone else's branch, and one push pollutes it.",
+  "Give subagents **global absolute paths** (`/home/<user>/projects/ferrite/.wt/<name>/`); never let them guess relative paths.",
+  "Run the shared backend only in the main checkout that tracks main — never inside a worktree (it fights over port 3211).",
+]
+
+[[chapter.item]]
+id = "shared-services"
+title = "Shared local services (red lines)"
+bullets = [
+  "The shared backend at `127.0.0.1:3211` with database `uf-local-postgres/ferrite_smoke` is used by every session: **never stop it, never `just db-reset` it**; start/stop via `just dev-backend …` (or `scripts/dev-backend.sh` for an isolated instance).",
+  "For an isolated verification run: `FERRITE_DEV_LISTEN=127.0.0.1:<high port> DATABASE_URL=<own db> scripts/dev-backend.sh start`.",
+  "Frontend ports are auto-assigned in 10000–16000; start/stop with `just dev-web` / `just dev-web stop`.",
+  "After changing `crates/api-*` or `bin/api`: `just dev-backend update` (about 3 seconds when the binary is current; keeps the login state).",
+]
+
+[[chapter.item]]
+id = "processes"
+title = "Starting processes"
+bullets = [
+  "Run long-lived services as **session-persistent background jobs** — never `nohup … &`: the process group is reaped when the tool call ends, which shows up as the service silently dying.",
+  "After starting, verify the port with `ss -ltn` and the overall state with `just dev-check`.",
+  "Broad-match kills like `pkill -f cargo|rustc` are forbidden; before cleaning up a process, read `readlink /proc/<pid>/cwd` to establish ownership.",
+  "Wrap CPU-heavy commands (compile / test / install) in `.githooks/heavy <cmd>` — the quota is computed from the core count, never hard-code a CPUQuota number.",
+]
+
+[[chapter.item]]
+id = "cargo-config"
+title = "Cargo configuration is already in place"
+text = '''
+`.cargo/config.toml` sets `jobs=6` and `rustc-wrapper=sccache`; the dev
+profile turns incremental compilation off and trims debuginfo. The
+settings apply to `.wt/*` worktrees automatically through cargo's
+upward search.
+'''
+bullets = [
+  "Do not `export RUSTC_WRAPPER` or change `jobs` in a session — the repo config is the single source.",
+  "With incremental off, same-tree small edits recompile at crate level — expected behavior, not a regression; sccache carries cold builds, branch switches, and CI-style rebuilds.",
+]
+
+# ---------------------------------------------------------------------------
+
+[[chapter]]
+id = "code"
+title = "Write Rust code"
+
+[[chapter.item]]
+id = "hard-preferences"
+title = "Project preferences (hard)"
+bullets = [
+  "Comments — including doc comments — are written in **English**; keep them true to the code and explain why, not what.",
+  "Function names are verb-noun and self-explanatory (`parse_channel_config`, not `do_config`); type names state their role.",
+  "Unit tests live at the bottom of the source file that owns them, declared as `#[cfg(test)] mod <name>_tests;` with the test code in a sibling `<name>_tests.rs`; integration and contract tests live in the root `tests/` directory.",
+  "`crates/harness-agent-prompts` and the frontend crates under `crates/ui-*` (including the coding projection layer) must build for `wasm32-unknown-unknown`; `crates/harness-tools` is exempt (pending decision).",
+  "Do not add dead fields or dead code, and never add `#[allow(dead_code)]` to silence a warning — delete it or write down why it must stay.",
+]
+
+[[chapter.item]]
+id = "chain-first"
+title = "Syntax norms by construct"
+text = '''
+Each construct below has one preferred form; when a rewrite would need
+one of the listed escapes, keep the original form instead. The only
+`for` escapes: a body needing `?`, `break`, `continue`, `return`, or `.await`, or
+a loop folding several accumulators whose update order matters.
+'''
+bullets = [
+  "**if-else**: keep it rare — plain `if` blocks are for simple early returns only; the more conditions pile up, the more it wants to be a `match`; `if let` / `match` on an Option/Result is replaced by the Option/Result combinators below.",
+  "**match**: the dispatch tool — use it for enums with three or more arms, guarded arms (`Some(x) if c`), or patterns binding several parts; keep arms exhaustive and avoid a bare wildcard when the enum can grow.",
+  "**iter chain**: building or transforming collections is one chain — `map` / `filter` / `filter_map` / `flat_map` finished by `collect` or `for_each`; an accumulator loop (`let mut v = Vec::new(); for … { v.push(..) }`) becomes `xs.into_iter().map(f).collect()`; three same-shape push loops merge with `.chain(..)`.",
+  "**Option**: two-way dispatch goes through combinators — `.map` / `.map_or` / `.and_then` / `.filter` / `.unwrap_or`; both `match { Some(..) => .., _ => .. }` and `if let Some(..) { .. } else { .. }` count as hand-written combinators.",
+  "**Result**: propagate with `?` first, then `.map` / `.and_then` for the payload, `.map_err` for context, `.map_or` / `.unwrap_or` for defaults; a `match` that only re-wraps variants (`Ok(v) => Ok(f(v))`) is a hand-written combinator.",
+  "**rsx**: keep `rsx!` element tags clean and readable — write as little Rust syntax inside as possible; `if` / `match` / `while` / `loop` stay out (conditional rendering extracts into a subcomponent), `for` is allowed for lists with a stable `key`, and non-trivial expressions move into named functions or computed values above the `rsx!` block.",
+  "**closures**: `|x| expr` for a single expression; when a closure captures many variables or its body grows past one expression, that is a signal to refactor into a named function call instead; prefer borrowing captured state over cloning into the closure, and state what a `move` closure captures when it crosses a thread or task boundary.",
+]
+
+[[chapter.item]]
+id = "reuse-and-split"
+title = "Reuse first, then split"
+bullets = [
+  "Before writing, look for a same-shape implementation and an installed dependency (code graph / LSP / search): if an existing tool solves it, do not write a new one — duplication is reported by the duplication gate.",
+  "One function does one thing: past roughly 80 lines, split it by responsibility into well-named functions; push cross-layer logic down into the owning crate instead of assembling it at the call site.",
+  "When an interface changes, migrate every caller in the same change — no dual-path compatibility.",
+]
+
+[[chapter.item]]
+id = "lsp"
+title = "Use the LSP to inspect interfaces (much faster than paging through files)"
+[[chapter.item.table]]
+headers = ["Question", "Operation"]
+rows = [
+  ["What type is this symbol, what does its signature look like", "`hover`"],
+  ["Where is it implemented, how is it used", "`goToDefinition`"],
+  ["Who breaks if I change it", "`findReferences` (mandatory before touching a public symbol)"],
+  ["Who calls this function in the repo", "`findReferences`; repo-wide: `codegraph callers <symbol>` after `codegraph sync`"],
+]
+
+[[chapter.item]]
+id = "rust-specs"
+title = "Validate syntax with rust-specs"
+text = '''
+Syntax rules run from the repo being checked (this repo). The rule list
+with good/bad examples per rule: `~/projects/rust-specs/README.md`
+(Rules table) and `lints/<name>/README.md`. The GitHub PR / issue format
+checks belong to the wrap-up chapter.
+'''
+code.lang = "bash"
+code.text = '''
+# syntax rules — run from the repo being checked
+cargo +nightly-2026-08-20 dylint --path ~/projects/rust-specs --pattern 'lints/*' --all --workspace
+cargo +nightly-2026-08-20 dylint --no-deps --path ~/projects/rust-specs --pattern 'lints/*' -p <crate>
+'''
+
+# ---------------------------------------------------------------------------
+
+[[chapter]]
+id = "testing"
+title = "Test"
+
+[[chapter.item]]
+id = "ci-vs-local"
+title = "Division of labor: CI runs the heavy work, you run the light work"
+bullets = [
+  "**CI is the main battlefield**: a PR may merge only when its `shell-ci` status is green; the full suite runs automatically after every main push (`shell-ci-full`, asynchronous, does not block merges). Watch runs with `gh run watch <run-id> -R hathawayANdRX105/ferrite-ci --exit-status` (`--compact` shows relevant/failed steps only) instead of repeatedly polling `gh pr checks`.",
+  "Run locally: `just test-fast` (the only local test entry; testless selects affected cases from the diff and exits loudly on anomalies or zero hits — it never skips silently).",
+  "Also cheap locally: `cargo check -p <crate>`, `cargo clippy -p <crate> --all-targets -- -D warnings`, `cargo fmt --check`, and single-case debugging that finishes in about three seconds.",
+  "Forbidden locally: whole-package tests, a full test binary, e2e, `just test`, and `just test-scoped` / `scripts/test-full.sh` (conditional full runs are CI-only; `just test` refuses and prints the dispatch command). For a full run: `gh workflow run ci-dispatch.yml --ref <branch> -f full=true`.",
+]
+
+[[chapter.item]]
+id = "local-checks"
+title = "Checks you can run locally"
+[[chapter.item.table]]
+headers = ["Purpose", "Command"]
+rows = [
+  ["Everything (fmt + clippy + check + gates)", "`just verify`"],
+  ["Spec gates (repo rules + dioxus lint)", "`just gate`"],
+  ["Repo rules alone", "`cargo xtask check --root . --scope changed --base origin/main --class deterministic`"],
+  ["Semantic layer (jev)", "the same command plus `--class semantic`"],
+  ["Rust syntax rules", "rust-specs dylint (see the code chapter)"],
+  ["GitHub PR / issue format", "rust-specs `cargo xtask check github-pr` / `github-issue` (see the wrap-up chapter)"],
+]
+
+[[chapter.item]]
+id = "test-authoring"
+title = "How tests are written here"
+bullets = [
+  "Unit tests sit at the bottom of the source file that owns the code (`#[cfg(test)] mod <name>_tests;`, code in a sibling `<name>_tests.rs`); integration and contract tests live in the root `tests/` directory; assert **real behavior** — never decorate with `assert!(true)`.",
+  "Every test carries a comment stating its purpose, the scenario it covers, and the acceptance condition being asserted — in English, above the test function.",
+  "Fix bugs by reproducing first, then verify the reproduction path no longer triggers; when a test fails, decide whether the implementation or the test is wrong — never bend the test to the implementation.",
+  "For anything you could not verify (missing runtime, credentials, hardware), write “not verified + why”; never report “did not run” as “passed”.",
+]
+
+[[chapter.item]]
+id = "ci-failures"
+title = "When CI fails"
+text = '''
+Look at the concrete job with `gh pr checks <PR>` and fix it on the
+**same PR** — failed checks are not an excuse to open another PR.
+'''
+
+# ---------------------------------------------------------------------------
+
+[[chapter]]
+id = "wrapup"
+title = "Wrap up"
+
+[[chapter.item]]
+id = "processes-and-resources"
+title = "Processes and resources"
+bullets = [
+  "Stop the long-lived processes you started (dev servers, watchers, background jobs) and confirm the ports are released; wait for background job results before closing the session.",
+  "Keep only what the maintainer explicitly asked to keep (for example a web frontend they are watching); release resources instead of competing with the user's CPU and memory.",
+]
+
+[[chapter.item]]
+id = "worktrees-and-branches"
+title = "Worktrees and branches"
+bullets = [
+  "Clean up only what **this session** created; never touch worktrees, branches, or processes other sessions are using.",
+  "Check three things before removing anything: the PR is merged, the tree has no uncommitted changes, and the directory belongs to the branch being cleaned. If any fails, state what blocks the cleanup instead of forcing it.",
+  "Order: `git worktree remove <dir>` → `git branch -d <branch>` → delete the remote branch. `-d` fails while the worktree still exists, so remove first.",
+  "`rm -rf .wt/`, `rm -rf .wt/*`, and `git clean` are strictly forbidden — they wipe other sessions' worktrees too.",
+  "For batch cleanup use the repo scripts: `just wt-candidates` (lists reclaimable worktrees) → `just wt-clean` (removes merged worktrees via `git worktree remove` and deletes merged local branches).",
+]
+
+[[chapter.item]]
+id = "workspace-residue"
+title = "Residue in the working tree"
+bullets = [
+  "`git status --porcelain` must come back empty: probe files, `.tmp/`, `*.log`, and debug artifacts are deleted or committed deliberately (with a written reason for keeping them).",
+  "`todo/` is a local task-brief directory (gitignored) and never gets committed.",
+  "Recycle build artifacts with `just wt-targets-clean`; it cleans **all** `.wt/*/target` plus the root `target`, so run it only when other sessions are idle.",
+]
+
+[[chapter.item]]
+id = "commits"
+title = "Commits and identity"
+bullets = [
+  "Conventional commits: title in English, body may be Chinese; one commit does one thing — no unrelated changes, formatting noise, or generated files mixed in.",
+  "The commit identity is the maintainer account `hathawayANdRX105`; never override it with `git -c user.name=…`, and never add a `Co-authored-by:` bot trailer.",
+  "Run `just verify` before committing — do not wait for a push failure to find out.",
+]
+
+[[chapter.item]]
+id = "pull-requests"
+title = "Pull requests"
+bullets = [
+  "All work goes through a PR — never commit or push directly to main.",
+  "Title in plain English (conventional-commit style), with at least one type label (`bug` / `enhancement` / `feature` / `documentation` / `chore` / `refactor` / `tests` / `epic`); the body follows `.github/PULL_REQUEST_TEMPLATE.md` — section headings in English with Chinese content.",
+  "Validate before creating — run from the rust-specs repo: `cd ~/projects/rust-specs && cargo xtask check github-pr --title \"<PR title>\" --body-file <body file>`; do not wait for `gh pr create` to reject it.",
+  "Review findings are fixed on the **same PR**; after opening or updating, watch `gh pr checks` and repair failures immediately instead of waiting to be asked.",
+]
+
+[[chapter.item]]
+id = "merging"
+title = "Merging"
+bullets = [
+  "Squash only: `gh pr merge <N> --squash --delete-branch --body \"Agent 🤖 - Merge: <reason>\"`.",
+  "`--merge` and `--rebase` are forbidden (including `-m` / `-r`), and so is a local `git merge <branch>` pushed to main — merging goes through a PR.",
+]
+
+[[chapter.item]]
+id = "issues"
+title = "Issues"
+bullets = [
+  "Issues go through the YAML forms in `.github/ISSUE_TEMPLATE/` (`bug` / `feature` / `task`): the form name and type label are English; the title and body are written in Chinese; one issue describes one main outcome; no unredacted agent output, keys, or user data goes in.",
+  "Validate title and body before `gh issue create` — run from the rust-specs repo: `cargo xtask check github-issue --title \"<issue title>\" --body-file <body file>`.",
+  "Creating issues is otherwise forbidden by default (only when the maintainer explicitly asks, and report first); findings are fixed on the PR instead of a new issue.",
+  "Closing an issue needs the maintainer's instruction, and its Done when checklist must be fully checked first.",
+]
+
+[[chapter.item]]
+id = "merge-audit"
+title = "Merge-audit ledger (optional deep self-check)"
+text = '''
+`scripts/merge-audit.py` is an optional review tool, not a gate. `just
+audit-generate` splits the working diff into units (file + hunk) and writes
+`.tmp/merge-audit.md`; `just audit-html` renders the maintainer's review
+panel. Ledger and panel live in `.tmp/` and are never committed; `--ledger`
+re-renders any ledger file through the same template.
+'''
+bullets = [
+  "Fill every `Intent:` in Chinese: why the change exists, what was changed, and (for cross-crate moves) which cratebook boundary applies.",
+  "Then have a subagent review each unit and write `Review:` in Chinese — findings must cite concrete diff evidence; a clean unit is recorded as `Review: ok` (the only English keyword).",
+  "Findings that stand get a Chinese `Fix:` line describing the action taken; an adjudicated non-fix states the reason. The html panel is what the maintainer reviews before merge.",
+]
+[[chapter.item]]
+id = "cratebook"
+title = "Keep the cratebook docs in sync before merge"
+bullets = [
+  "If you added, removed, moved, or renamed a crate, changed internal dependencies, edited a cratebook md source, or added/removed `.rs` files: run `just cratebook` and commit the changed docs plus `docs/cratebook.lock.json`.",
+  "`cratebook_freshness` is a FAIL-level pre-push/merge rule: a stale cratebook blocks the merge and lists the changed crates.",
+  "The fix path is fixed: edit the `cratebook-files-<layer>.md` source, run `just cratebook`, commit the regenerated docs. Never hand-edit the overview docs or the lock to make the check pass.",
+]
+[[chapter.item]]
+id = "delivery-record"
+title = "Delivery record"
+text = '''
+The PR body's `## Delivery record` section lists one line per finding:
+`rule ID → root cause → fix (file:line)`. Rejections list
+`rule ID + reason + basis` for the maintainer to judge. WARN is handled
+with the same care as FAIL.
+'''
+
+# ---------------------------------------------------------------------------
+
+[[chapter]]
+id = "cautions"
+title = "Special cautions"
+
+[[chapter.item]]
+id = "deletion"
+title = "Deleting things"
+bullets = [
+  "Confirm a file is really waste (generated output, merged temporary files) before deleting — not merely “looks unused”.",
+  "Delete recoverably (`gio trash`); for `rm -rf`, overwriting writes, or wiping databases, explain the impact and wait for confirmation.",
+  "If the target is someone else's artifact, a file whose purpose you cannot explain, or a gitignored file you did not create — stop and ask.",
+]
+
+[[chapter.item]]
+id = "secrets"
+title = "Secrets and irreversible changes"
+bullets = [
+  "Credentials, tokens, private keys: never printed to output, never committed, never pasted into a PR body; examples use placeholders (`<API_KEY>`, `127.0.0.1`).",
+  "Do not dump whole config files or environments (they may contain secrets); read only the fields you need.",
+  "System-level configuration, fonts, global environment, and dotfiles stay untouched by default — ask before changing; installing packages, changing PATH, or installing systemd units needs confirmation first.",
+  "Database migrations, config-format changes, and major dependency upgrades must be reversible — confirm the rollback path first.",
+]
+
+[[chapter.item]]
+id = "long-running"
+title = "Long jobs and pointless reads"
+bullets = [
+  "Wrap compiles, tests, and installs in `.githooks/heavy`; batches expected to run long go to CI — do not grind them locally.",
+  "Never feed a whole repository or a huge file to a review tool in one shot (rate limits + noise): review per module and feed only the diff of this change.",
+  "Read gate output completely: `head`, `tail`, and `grep -v` swallow later findings; when a report says “N checks passed”, confirm N covered the part you changed.",
+  "Find things with the code graph, the LSP, or search first — do not read large directories file by file.",
+]
+
+[[chapter.item]]
+id = "findings"
+title = "Gate findings are work items, not verdicts"
+numbered = [
+  "Read the rule text first and establish what the finding actually demands; if you still cannot decide, record it as pending adjudication in the delivery record — do not guess and do not ignore.",
+  "Fix the root cause: make the constraint hold instead of making the check stop firing; afterwards ask whether the constraint still holds elsewhere in this repo.",
+  "Gaming fixes are violations whether or not the gate turns green: editing or deleting rule files, lowering severities, `--no-verify`, truncating output and pretending it was read, `#[allow(dead_code)]` / `# noqa` suppression, placeholder files to fool directory rules, `assert!(true)` in tests without assertions, splits or renames whose only purpose is dodging a match scope.",
+  "Leave one written disposition per finding: fix → `rule ID → root cause → fix (file:line)`; reject → `rule ID + reason + basis` for the maintainer.",
+  "WARN is not ignorable — it is handled with the same discipline as FAIL.",
+]
+
+[[chapter.item]]
+id = "authority"
+title = "Limits of your authority"
+bullets = [
+  "AGENTS.md and `.agent/rules/` are the rules of this repo; when a rule conflicts with reality, escalate to the maintainer — never rewrite a rule yourself.",
+  "Do not create issues and do not restructure epics unless the maintainer explicitly asks for it.",
+]
