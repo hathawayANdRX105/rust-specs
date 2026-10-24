@@ -2,13 +2,12 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_hir;
-extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
 use dioxus_lint_scope::file_allowed;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_lint::{LateContext, LateLintPass, LintContext};
-use rustc_span::{BytePos, SourceFile, Span};
+use dioxus_rsx_scan::{Finding, finding, span_for};
 
 dylint_linting::declare_late_lint! {
     /// A `#[component]` function body must contain at most one content `rsx!`.
@@ -47,14 +46,6 @@ dylint_linting::declare_late_lint! {
     pub DIOXUS_RSX_ONE_PER_COMPONENT,
     Warn,
     "component function contains more than one rsx!; extract a child component"
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct Finding {
-    line: usize,
-    column: usize,
-    len: usize,
-    msg: String,
 }
 
 fn scan_source(text: &str) -> Vec<Finding> {
@@ -107,7 +98,6 @@ fn check_fn(
         let name = ident.to_string();
         out.push(finding(
             ident.span(),
-            name.len(),
             format!("组件函数 {name} 含 {count} 个 rsx!，应为 1 个（R1.3）"),
         ));
     }
@@ -161,16 +151,6 @@ fn is_rsx_macro(mac: &syn::Macro) -> bool {
         .is_some_and(|segment| segment.ident == "rsx")
 }
 
-fn finding(span: proc_macro2::Span, len: usize, msg: String) -> Finding {
-    let start = span.start();
-    Finding {
-        line: start.line,
-        column: start.column,
-        len,
-        msg,
-    }
-}
-
 fn is_ui_crate(name: &str) -> bool {
     name.starts_with("ui_") || name == "web"
 }
@@ -179,25 +159,6 @@ fn is_fixture(text: &str) -> bool {
     text.lines()
         .take(5)
         .any(|line| line.contains("dioxus-lint-fixture"))
-}
-
-fn byte_offset(text: &str, line: usize, column: usize) -> usize {
-    let mut offset = 0;
-    for (index, current) in text.split_inclusive('\n').enumerate() {
-        if index + 1 == line {
-            let line_len = current.trim_end_matches('\n').len();
-            return offset + column.min(line_len);
-        }
-        offset += current.len();
-    }
-    offset
-}
-
-fn span_for(file: &SourceFile, text: &str, finding: &Finding) -> Span {
-    let offset = byte_offset(text, finding.line, finding.column);
-    let lo = file.start_pos + BytePos(offset as u32);
-    let hi = lo + BytePos(finding.len.max(1) as u32);
-    Span::with_root_ctxt(lo, hi)
 }
 
 impl<'tcx> LateLintPass<'tcx> for DioxusRsxOnePerComponent {

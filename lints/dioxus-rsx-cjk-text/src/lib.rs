@@ -2,7 +2,6 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_hir;
-extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
 use dioxus_lint_scope::file_allowed;
@@ -10,7 +9,7 @@ use dioxus_rsx::{BodyNode, CallBody, TemplateBody};
 use quote::ToTokens;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_lint::{LateContext, LateLintPass, LintContext};
-use rustc_span::{BytePos, SourceFile, Span};
+use dioxus_rsx_scan::{Finding, finding, span_for};
 use syn::visit::Visit;
 
 dylint_linting::declare_late_lint! {
@@ -46,14 +45,6 @@ dylint_linting::declare_late_lint! {
     pub DIOXUS_RSX_CJK_TEXT,
     Warn,
     "Chinese text inside rsx element body; use i18n / text constants"
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct Finding {
-    line: usize,
-    column: usize,
-    len: usize,
-    msg: String,
 }
 
 fn scan_source(text: &str) -> Vec<Finding> {
@@ -100,7 +91,6 @@ fn walk_node(node: &BodyNode, out: &mut Vec<Finding>) {
             if has_cjk(&rendered) {
                 out.push(finding(
                     text.input.span(),
-                    rendered.len(),
                     format!("rsx 元素体内出现中文文本：{rendered}（H3：文案走 i18n/常量）"),
                 ));
             }
@@ -127,16 +117,6 @@ fn is_cjk(c: char) -> bool {
     matches!(c as u32, 0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xF900..=0xFAFF)
 }
 
-fn finding(span: proc_macro2::Span, len: usize, msg: String) -> Finding {
-    let start = span.start();
-    Finding {
-        line: start.line,
-        column: start.column,
-        len,
-        msg,
-    }
-}
-
 fn is_ui_crate(name: &str) -> bool {
     name.starts_with("ui_") || name == "web"
 }
@@ -145,25 +125,6 @@ fn is_fixture(text: &str) -> bool {
     text.lines()
         .take(5)
         .any(|line| line.contains("dioxus-lint-fixture"))
-}
-
-fn byte_offset(text: &str, line: usize, column: usize) -> usize {
-    let mut offset = 0;
-    for (index, current) in text.split_inclusive('\n').enumerate() {
-        if index + 1 == line {
-            let line_len = current.trim_end_matches('\n').len();
-            return offset + column.min(line_len);
-        }
-        offset += current.len();
-    }
-    offset
-}
-
-fn span_for(file: &SourceFile, text: &str, finding: &Finding) -> Span {
-    let offset = byte_offset(text, finding.line, finding.column);
-    let lo = file.start_pos + BytePos(offset as u32);
-    let hi = lo + BytePos(finding.len.max(1) as u32);
-    Span::with_root_ctxt(lo, hi)
 }
 
 impl<'tcx> LateLintPass<'tcx> for DioxusRsxCjkText {

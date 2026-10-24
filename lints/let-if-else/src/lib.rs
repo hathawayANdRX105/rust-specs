@@ -2,14 +2,12 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_hir;
-extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
 use dioxus_lint_scope::file_allowed;
-use proc_macro2::Span;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_lint::{LateContext, LateLintPass, LintContext};
-use rustc_span::{BytePos, SourceFile};
+use dioxus_rsx_scan::{Finding, finding, span_for};
 use syn::visit::Visit;
 
 dylint_linting::declare_late_lint! {
@@ -62,14 +60,6 @@ const MSG: &str = "不要把 rsx 分支 hoist 成 let-if-else：用 pick(cond, r
 
 /// One finding produced from source text (line/column are 1-based line and
 /// 0-based column, matching `proc_macro2`'s span-locations).
-#[derive(Debug, PartialEq, Eq)]
-struct Finding {
-    line: usize,
-    column: usize,
-    len: usize,
-    msg: String,
-}
-
 fn scan_source(text: &str) -> Vec<Finding> {
     let Ok(file) = syn::parse_file(text) else {
         return Vec::new();
@@ -89,7 +79,7 @@ impl<'ast> Visit<'ast> for LetIfVisitor {
             && let syn::Expr::If(if_expr) = &*init.expr
             && if_expr_has_rsx(if_expr)
         {
-            self.out.push(finding(if_expr.if_token.span, 2, MSG));
+            self.out.push(finding(if_expr.if_token.span, MSG.to_string()));
         }
         syn::visit::visit_local(self, local);
     }
@@ -122,39 +112,10 @@ impl<'ast> Visit<'ast> for RsxFinder {
     }
 }
 
-fn finding(span: Span, len: usize, msg: &str) -> Finding {
-    let start = span.start();
-    Finding {
-        line: start.line,
-        column: start.column,
-        len,
-        msg: msg.to_string(),
-    }
-}
-
 fn is_fixture(text: &str) -> bool {
     text.lines()
         .take(5)
         .any(|line| line.contains("dioxus-lint-fixture"))
-}
-
-fn byte_offset(text: &str, line: usize, column: usize) -> usize {
-    let mut offset = 0;
-    for (index, current) in text.split_inclusive('\n').enumerate() {
-        if index + 1 == line {
-            let line_len = current.trim_end_matches('\n').len();
-            return offset + column.min(line_len);
-        }
-        offset += current.len();
-    }
-    offset
-}
-
-fn span_for(file: &SourceFile, text: &str, finding: &Finding) -> rustc_span::Span {
-    let offset = byte_offset(text, finding.line, finding.column);
-    let lo = file.start_pos + BytePos(offset as u32);
-    let hi = lo + BytePos(finding.len.max(1) as u32);
-    rustc_span::Span::with_root_ctxt(lo, hi)
 }
 
 impl<'tcx> LateLintPass<'tcx> for LetIfElse {

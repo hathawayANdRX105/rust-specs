@@ -12,5 +12,11 @@ warning: rsx 中禁止 if/if-else（FAIL 级）：把条件渲染移到 rsx 外�
 LL |             if show { span { "a" } } else { span { "b" } }
    |             ^^
 
-warning: 2 warnings emitted
+warning: rsx 中禁止 if/if-else（FAIL 级）：把条件渲染移到 rsx 外，或抽成组件/插槽
+  --> $DIR/main.rs:24:33
+   |
+LL |     let _ = rsx! { div { "探针中文" if c { span { "a" } } } };
+   |                                     ^^
+
+warning: 3 warnings emitted
 

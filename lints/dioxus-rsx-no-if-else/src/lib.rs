@@ -58,7 +58,7 @@ fn scan_source(text: &str) -> Vec<Finding> {
     for call in parse_rsx_calls(text) {
         walk_nodes(&call.body, &mut |node| {
             if let BodyNode::IfChain(chain) = node {
-                out.push(finding(chain.if_token.span, 2, IF_MSG));
+                out.push(finding(chain.if_token.span, IF_MSG.to_string()));
             }
         });
     }

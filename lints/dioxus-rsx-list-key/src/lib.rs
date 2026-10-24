@@ -2,7 +2,6 @@
 #![warn(unused_extern_crates)]
 
 extern crate rustc_hir;
-extern crate rustc_span;
 
 use clippy_utils::diagnostics::span_lint;
 use dioxus_lint_scope::file_allowed;
@@ -10,7 +9,7 @@ use dioxus_rsx::{Attribute, BodyNode, CallBody, TemplateBody};
 use quote::ToTokens;
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_lint::{LateContext, LateLintPass, LintContext};
-use rustc_span::{BytePos, SourceFile, Span};
+use dioxus_rsx_scan::{Finding, finding, span_for};
 use syn::visit::Visit;
 
 dylint_linting::declare_late_lint! {
@@ -57,14 +56,6 @@ dylint_linting::declare_late_lint! {
 }
 
 const MSG: &str = "列表 key 使用数组下标（{index}/{i}/{idx}）：动态列表必须用稳定业务 id";
-
-#[derive(Debug, PartialEq, Eq)]
-struct Finding {
-    line: usize,
-    column: usize,
-    len: usize,
-    msg: String,
-}
 
 fn scan_source(text: &str) -> Vec<Finding> {
     let Ok(file) = syn::parse_file(text) else {
@@ -139,18 +130,8 @@ fn check_attrs(attributes: &[Attribute], out: &mut Vec<Finding>) {
         }
         let value = attribute.value.to_token_stream().to_string();
         if value.contains("{index}") || value.contains("{i}") || value.contains("{idx}") {
-            out.push(finding(attribute.name.span(), 3, MSG));
+            out.push(finding(attribute.name.span(), MSG.to_string()));
         }
-    }
-}
-
-fn finding(span: proc_macro2::Span, len: usize, msg: &str) -> Finding {
-    let start = span.start();
-    Finding {
-        line: start.line,
-        column: start.column,
-        len,
-        msg: msg.to_string(),
     }
 }
 
@@ -162,25 +143,6 @@ fn is_fixture(text: &str) -> bool {
     text.lines()
         .take(5)
         .any(|line| line.contains("dioxus-lint-fixture"))
-}
-
-fn byte_offset(text: &str, line: usize, column: usize) -> usize {
-    let mut offset = 0;
-    for (index, current) in text.split_inclusive('\n').enumerate() {
-        if index + 1 == line {
-            let line_len = current.trim_end_matches('\n').len();
-            return offset + column.min(line_len);
-        }
-        offset += current.len();
-    }
-    offset
-}
-
-fn span_for(file: &SourceFile, text: &str, finding: &Finding) -> Span {
-    let offset = byte_offset(text, finding.line, finding.column);
-    let lo = file.start_pos + BytePos(offset as u32);
-    let hi = lo + BytePos(finding.len.max(1) as u32);
-    Span::with_root_ctxt(lo, hi)
 }
 
 impl<'tcx> LateLintPass<'tcx> for DioxusRsxListKey {
