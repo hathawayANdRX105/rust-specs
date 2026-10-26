@@ -14,19 +14,31 @@ let node = if cond { || rsx! { span { "a" } } } else { || rsx! { span { "b" } } 
 ```
 
 Both branches already produce the selected value, so the closure layer is an
-extra shell. Pass the values directly:
+extra shell. Pass the values directly.
 
 ## Good
+
+Which form to use depends on what the branches build.
+
+rsx branches — `pick` is the only single-expression form, because
+`dioxus-rsx-no-if-else` bans `if` / `else` as an rsx child:
 
 ```rust
 let node = pick(cond, rsx! { span { "a" } }, rsx! { span { "b" } });
 ```
 
+Plain values — a plain `if` / `else`. Do not use `pick` here; see
+[`pick-outside-rsx`](../pick-outside-rsx/README.md):
+
+```rust
+let n = if cond { 1 } else { 2 };
+```
+
 ## Why
 
 The extra closure layer hides the actual branch values: the reader has to open
-two closures to see what is selected. `pick` already chooses between two values
-in one expression.
+two closures to see what is selected. Dropping the layer keeps the choice
+visible, and for plain values it also keeps the untaken branch unevaluated.
 
 ## Known problems
 

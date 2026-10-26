@@ -19,10 +19,13 @@ dylint_linting::declare_late_lint! {
     /// The rule applies to every crate. Moving the branch out of rsx satisfies
     /// `dioxus-rsx-no-if-else` on a technicality but keeps the component's view
     /// split into a branch block. The project already has a single-expression
-    /// form: `ui_util::pick::pick(cond, rsx! { .. }, rsx! { .. })` for
-    /// `Element` branches, or `ui_util::pick::pick(cond, a, b)` for cheap
-    /// `Copy` values. Use `pick_with(cond, || .., || ..)` only when a branch
-    /// must stay lazy.
+    /// form for `Element` branches:
+    /// `ui_util::pick::pick(cond, rsx! { .. }, rsx! { .. })`. Use
+    /// `pick_with(cond, || .., || ..)` only when a branch must stay lazy.
+    ///
+    /// A `let` whose branches are plain values is not reported: there the
+    /// `if` / `else` expression is the preferred form, and `pick` is for rsx
+    /// branches only (see `pick-outside-rsx`).
     ///
     /// ### Why is this bad?
     ///

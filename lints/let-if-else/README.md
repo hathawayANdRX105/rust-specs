@@ -35,11 +35,14 @@ effects or collects/iterates):
 { pick_with(show, || load_page(), || load_empty()) }
 ```
 
-For cheap `Copy` values (strings, variants, numbers):
+A `let` whose branches are plain values is **not** reported by this rule.
+There the `if` / `else` expression is the preferred form, and `pick` is
+reserved for rsx branches — see
+[`pick-outside-rsx`](../pick-outside-rsx/README.md):
 
 ```rust
-let class = pick(selected, "ui-item-selected", "ui-item");
-let variant = pick(active, ButtonVariant::Secondary, ButtonVariant::Ghost);
+let class = if selected { "ui-item-selected" } else { "ui-item" };
+let variant = if active { ButtonVariant::Secondary } else { ButtonVariant::Ghost };
 ```
 
 ## Why

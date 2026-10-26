@@ -17,10 +17,10 @@ fn good_plain(c: bool) {
     let _ = n;
 }
 
-// Good: a plain pick with values.
+// Good: pick selecting between two rsx branches.
 #[cfg(any())]
-fn good_pick(c: bool) {
-    let _ = pick(c, 1, 2);
+fn good_pick_rsx(c: bool) {
+    let _ = pick(c, rsx! { span { "a" } }, rsx! { span { "b" } });
 }
 
 fn main() {}

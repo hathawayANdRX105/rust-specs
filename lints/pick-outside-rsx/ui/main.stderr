@@ -1,0 +1,16 @@
+warning: pick 只能用于 rsx 内部的分支选择；rsx 之外用 if/else 表达式
+  --> $DIR/main.rs:9:17
+   |
+LL |     let class = pick(active, "row-active", "row");
+   |                 ^^^^
+   |
+   = note: `#[warn(pick_outside_rsx)]` on by default
+
+warning: pick 只能用于 rsx 内部的分支选择；rsx 之外用 if/else 表达式
+  --> $DIR/main.rs:16:13
+   |
+LL |     let n = pick_with(active, || 1, || 2);
+   |             ^^^^^^^^^
+
+warning: 2 warnings emitted
+
