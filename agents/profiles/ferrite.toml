@@ -114,7 +114,6 @@ title = "Files that need extra care"
 bullets = [
   "`README.md` / `Cargo.toml`: adding or moving a crate means updating both (the README manifest is the responsibility record).",
   "`checks.toml`: spec policy — changing it changes rule semantics, which is a maintainer decision.",
-  "`.githooks/spec/custom/`: project-owned assets (UI contracts and similar); do not edit them as if they were rule files.",
   "`todo/`: local task briefs and audit notes (gitignored, never committed) — the deliverable is a PR, not a todo file.",
 ]
 

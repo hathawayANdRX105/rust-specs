@@ -1,6 +1,6 @@
 //! `checks` — xtask-style CLI validating GitHub PR / issue metadata and bodies
-//! against the rust-specs spec rules (see the ferrite `.githooks/spec/github/`
-//! YAML files for the rule source of truth).
+//! against the rust-specs spec rules (see the `specs/github/` docs in this
+//! repo for the rule source of truth).
 //!
 //! Usage:
 //!   cargo xtask check github-pr [--title ..] [--body-file ..] [--body ..]
@@ -11,11 +11,12 @@
 mod github_issue;
 mod github_pr;
 mod util;
+mod spec_rules;
 
 use clap::{Args, Parser, Subcommand};
 use github_issue::IssueInput;
 use github_pr::PrInput;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use util::{Finding, Severity};
 
@@ -37,6 +38,8 @@ enum Command {
         #[command(subcommand)]
         target: Target,
     },
+    /// Run repository structure rules (dep-edge, path-forbidden, text-pattern, etc.)
+    Structure(StructureArgs),
 }
 
 #[derive(Subcommand)]
@@ -80,6 +83,22 @@ struct CommonArgs {
     #[arg(long)]
     number: Option<u64>,
 }
+/// Repository structure rule checks (deterministic / advisory classes).
+#[derive(Args)]
+struct StructureArgs {
+    /// Repository root (defaults to current working directory)
+    #[arg(long)]
+    root: Option<PathBuf>,
+    /// Check class: deterministic | advisory | semantic
+    #[arg(long, default_value = "deterministic")]
+    class: String,
+    /// Scope: changed | all
+    #[arg(long, default_value = "changed")]
+    scope: String,
+    /// Base branch for changed scope (merge-base with HEAD)
+    #[arg(long)]
+    base: Option<String>,
+}
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -88,6 +107,7 @@ fn main() -> ExitCode {
             Target::GithubPr(args) => run_pr(&args),
             Target::GithubIssue(args) => run_issue(&args),
         },
+        Command::Structure(args) => run_structure(&args),
     }
 }
 
@@ -105,6 +125,177 @@ fn run_issue(args: &IssueArgs) -> ExitCode {
         Err(e) => return fail_with(e),
     };
     report(&github_issue::check_issue(&input))
+}
+/// 运行仓库结构规则检查（deterministic / advisory / semantic 类）。
+fn run_structure(args: &StructureArgs) -> ExitCode {
+    let root = args.root.as_deref().unwrap_or_else(|| Path::new("."));
+    let root_path = Path::new(root);
+
+    // 收集跟踪文件（git ls-files）。
+    let tracked_files: Vec<String> = match std::process::Command::new("git")
+        .args(["ls-files"])
+        .current_dir(root_path)
+        .output()
+    {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout)
+            .lines()
+            .map(|s| s.to_string())
+            .collect(),
+        _ => {
+            eprintln!("failed to run git ls-files; is {} a git repository?", root.display());
+            return ExitCode::from(2);
+        }
+    };
+
+    let mut findings: Vec<Finding> = Vec::new();
+
+    match args.class.as_str() {
+        "deterministic" => {
+            // ---- dep-edge: 三层依赖方向 (checks.toml [kinds.dep-edge.domain]) ----
+            if let Some(graph) = spec_rules::load_dep_graph(root_path) {
+                let dep_edge_params = spec_rules::DepEdgeParams {
+                    edges_deny: vec![
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/api-*".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/gateway-*".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/coding-harness-*".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/app-db/**".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/api-*".into(), to: "crates/ui-*".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/api-*".into(), to: "crates/coding-harness-*".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/**".into(), to: "bin/**".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/**".into(), to: "platforms/**".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "bin/**".into(), to: "platforms/**".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "bin/**".into(), to: "bin/**".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "platforms/**".into(), to: "platforms/**".into(), message: None },
+                    ],
+                };
+                if let Ok(rule) =
+                    spec_rules::DepEdgeRule::new("dep-edge.domain".into(), &dep_edge_params, Severity::Fail)
+                {
+                    findings.extend(rule.check(&graph));
+                }
+
+                // ---- dep-cycles: 依赖无环 ----
+                let cycle_rule =
+                    spec_rules::CyclesRule::new("dep-cycles.domain".into(), Severity::Fail);
+                findings.extend(cycle_rule.check(&graph));
+            }
+
+            // ---- path-forbidden: pages-own-ui ----
+            let path_forbidden_params = spec_rules::PathForbiddenParams {
+                paths: vec![
+                    "crates/ui-pages/src/*/ui.rs".into(),
+                    "crates/ui-pages/src/*/ui/**".into(),
+                ],
+                message: Some(
+                    "page 域不应自带 ui 子模块；共享组件放 crates/ui-components".into(),
+                ),
+            };
+            if let Ok(rule) = spec_rules::PathForbiddenRule::new(
+                "path-forbidden.pages-own-ui".into(),
+                &path_forbidden_params,
+                Severity::Fail,
+            ) {
+                let tracked: Vec<PathBuf> = tracked_files
+                    .iter()
+                    .map(|p| PathBuf::from(p.as_str()))
+                    .collect();
+                findings.extend(rule.check_files(&tracked));
+            }
+
+            // ---- name-pattern: rust-file-snake ----
+            let name_pattern_params = spec_rules::NamePatternParams {
+                paths_include: vec!["crates/**/*.rs".into(), "bin/**/*.rs".into()],
+                pattern: "^[a-z0-9_]+\\.rs$".into(),
+                message: Some("Rust 源文件名必须 snake_case".into()),
+            };
+            if let Ok(rule) = spec_rules::NamePatternRule::new(
+                "name-pattern.rust-file-snake".into(),
+                &name_pattern_params,
+                Severity::Fail,
+            ) {
+                let tracked: Vec<PathBuf> = tracked_files
+                    .iter()
+                    .map(|p| PathBuf::from(p.as_str()))
+                    .collect();
+                findings.extend(rule.check_files(&tracked));
+            }
+
+            // ---- text-pattern: hardcoded-secret ----
+            let text_pattern_params = spec_rules::TextPatternParams {
+                paths_include: vec![
+                    "**/*.rs".into(),
+                    "**/*.ts".into(),
+                    "**/*.js".into(),
+                    "**/*.py".into(),
+                ],
+                paths_exclude: vec![
+                    "**/tests/**".into(),
+                    "tests/**".into(),
+                    "**/test_*.rs".into(),
+                    "*.md".into(),
+                    "target/".into(),
+                    ".wt/".into(),
+                    "node_modules/".into(),
+                ],
+                patterns_deny: vec![
+                    "(?i)(password|passwd|secret|api_key|apikey|token|auth_token|access_token|private_key|connection_string)\\s*[:=]\\s*[\"'][^\"'\\s]{8,}[\"]'".into()
+                ],
+                patterns_allow: vec![
+                    r"(?i)(your-|xxx|todo|placeholder|example|test-key|mock|fake|dummy|change-me|replaceme|fixture|seed_|devpass)".into()
+                ],
+                message: Some(
+                    "疑似硬编码凭据（占位符/示例已滤；真假判定待语义层）".into(),
+                ),
+            };
+            if let Ok(rule) = spec_rules::TextPatternRule::new(
+                "text-pattern.hardcoded-secret".into(),
+                &text_pattern_params,
+                Severity::Warn,
+            ) {
+                for f in &tracked_files {
+                    let path = Path::new(f);
+                    if let Ok(content) = std::fs::read_to_string(path) {
+                        findings.extend(rule.check_file(path, &content));
+                    }
+                }
+            }
+        }
+        "advisory" => {
+            // ---- duplicate-file: 疑似复刻既有实现 ----
+            let dup_params = spec_rules::DuplicateFileParams {
+                paths_include: vec!["crates/**/*.rs".into(), "bin/**/*.rs".into()],
+                paths_exclude: vec!["**/tests/**".into(), "crates/ui-components/src/icons/**".into()],
+                min_tokens: Some(80),
+                min_similarity: Some(0.8),
+                limit: Some(3),
+                message: Some("疑似复刻既有实现（考虑复用；若确为独立实现可忽略）".into()),
+            };
+            if let Ok(rule) =
+                spec_rules::DuplicateFileRule::new("duplicate-file.dup-advisory".into(), &dup_params, Severity::Warn)
+            {
+                // 既有文件 = 全仓跟踪文件；变更文件 = 本次改动（简化：用全仓文件自比，找近亲）
+                let existing: Vec<(PathBuf, String)> = tracked_files
+                    .iter()
+                    .filter_map(|p| {
+                        let path = Path::new(p);
+                        std::fs::read_to_string(path).ok().map(|c| (path.to_path_buf(), c))
+                    })
+                    .collect();
+                findings.extend(rule.check(&existing, &existing));
+            }
+            // ---- git 信号（hotspot/coupling/defects）：需 git 历史，此处标记未实现 ----
+            eprintln!("note: git-hotspot/coupling/defects advisory rules require git-history index; skipped locally");
+        }
+        "semantic" => {
+            eprintln!("semantic class requires jev endpoint (http://127.0.0.1:8001); not implemented in local binary");
+        }
+        other => {
+            eprintln!("unknown class: {other} (use deterministic | advisory | semantic)");
+            return ExitCode::from(2);
+        }
+    }
+
+    report(&findings)
 }
 
 /// Resolves the effective PR input, fetching missing data from `gh`.

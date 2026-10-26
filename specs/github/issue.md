@@ -1,6 +1,6 @@
 # GitHub Issue 规范
 
-> 正本：ferrite `.githooks/spec/github/github_issues.yaml`
+> 正本：原 canon `github_issues.yaml`（已迁移到本目录）
 > 适用：创建 issue / sub-issue、关闭 issue 前自查。
 > 规则 ID：IS-00 ~ IS-16（由 rust-specs 的 `cargo xtask check github-issue` 逐条检查；规则正本源自 canon 的 `github_issues.yaml`）。
 
@@ -80,7 +80,7 @@
 ## Suspected areas
 
 - `crates/gh_wrap` 的标题检查逻辑
-- `.githooks/spec/github/github_pull_requests.yaml` 的 `forbidden_brackets_in_title`
+- `github_pull_requests.yaml` 的 `forbidden_brackets_in_title`（规则已迁入 rust-specs）
 
 ## Out of scope
 
