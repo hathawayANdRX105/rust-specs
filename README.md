@@ -64,7 +64,8 @@ cargo agents check ferrite                          # drift check
 | `expect-in-non-result` | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable) | ✅ implemented, ui-tested |
 | `chainable-single-statement` | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each` | ✅ implemented, ui-tested; adopted (detection-only, WARN) |
 | `let-if-else` | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — use `pick` / `pick_with` | ✅ implemented, ui-tested |
-| `redundant-branch-closures` | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — use `pick(cond, a, b)` | ✅ implemented, ui-tested |
+| `redundant-branch-closures` | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — drop the closure layer (`pick` for rsx branches, `if`/`else` for plain values) | ✅ implemented, ui-tested |
+| `pick-outside-rsx` | `ui_util::pick` / `pick_with` outside `rsx!` with no rsx branch — use a plain `if`/`else` expression | ✅ implemented, ui-tested |
 
 ## Dioxus rules
 

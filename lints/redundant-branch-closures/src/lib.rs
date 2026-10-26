@@ -28,17 +28,23 @@ dylint_linting::declare_late_lint! {
     /// ```
     ///
     /// Both branches already produce the selected value, so the closures are
-    /// an extra shell. Pass the values directly:
+    /// an extra shell. Pass the values directly — which form depends on what
+    /// the branches build:
     ///
     /// ```rust
+    /// // rsx branches: pick is the only single-expression form allowed
     /// let node = pick(cond, rsx! { span { "a" } }, rsx! { span { "b" } });
+    ///
+    /// // plain values: a plain if/else, not pick (see pick-outside-rsx)
+    /// let n = if cond { 1 } else { 2 };
     /// ```
     ///
     /// ### Why is this bad?
     ///
     /// The extra closure layer hides the actual branch values: the reader has
-    /// to open two closures to see what is selected. `pick` already chooses
-    /// between two values in one expression.
+    /// to open two closures to see what is selected. Dropping the layer keeps
+    /// the choice visible, and for plain values it also keeps the untaken
+    /// branch unevaluated.
     ///
     /// ### Known problems
     ///
@@ -48,10 +54,10 @@ dylint_linting::declare_late_lint! {
     /// branch arguments are no-arg closures.
     pub REDUNDANT_BRANCH_CLOSURES,
     Warn,
-    "redundant no-arg closures on both branches; use pick(cond, a, b)"
+    "redundant no-arg closures on both branches; drop the closure layer"
 }
 
-const MSG: &str = "两个分支都是无参闭包且返回同一类型，闭包是多余的：用 pick(cond, a, b)";
+const MSG: &str = "两个分支都是无参闭包且返回同一类型，闭包是多余的：rsx 分支用 pick(cond, a, b)，普通值用 if/else";
 
 /// One finding produced from source text (line/column are 1-based line and
 /// 0-based column, matching `proc_macro2`'s span-locations).
