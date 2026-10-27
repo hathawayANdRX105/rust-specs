@@ -1,0 +1,52 @@
+warning: lone `is_*` check on Option/Result re-wraps it — chain combinators (`map`/`map_or`/`then_some`/`filter`) on the receiver instead of going through bool or `if`/`else`
+  --> $DIR/main.rs:5:5
+   |
+LL | /     if o.is_some() {
+LL | |         Some(1)
+LL | |     } else {
+LL | |         None
+LL | |     }
+   | |_____^
+   |
+   = note: `#[warn(is_check_needs_chain)]` on by default
+
+warning: lone `is_*` check on Option/Result re-wraps it — chain combinators (`map`/`map_or`/`then_some`/`filter`) on the receiver instead of going through bool or `if`/`else`
+  --> $DIR/main.rs:14:5
+   |
+LL | /     if o.is_none() {
+LL | |         None
+LL | |     } else {
+LL | |         Some(2)
+LL | |     }
+   | |_____^
+
+warning: lone `is_*` check on Option/Result re-wraps it — chain combinators (`map`/`map_or`/`then_some`/`filter`) on the receiver instead of going through bool or `if`/`else`
+  --> $DIR/main.rs:23:5
+   |
+LL | /     if r.is_ok() {
+LL | |         Ok(1)
+LL | |     } else {
+LL | |         Err(())
+LL | |     }
+   | |_____^
+
+warning: lone `is_*` check on Option/Result re-wraps it — chain combinators (`map`/`map_or`/`then_some`/`filter`) on the receiver instead of going through bool or `if`/`else`
+  --> $DIR/main.rs:32:5
+   |
+LL |     o.is_some().then(|| 1)
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: lone `is_*` check on Option/Result re-wraps it — chain combinators (`map`/`map_or`/`then_some`/`filter`) on the receiver instead of going through bool or `if`/`else`
+  --> $DIR/main.rs:37:5
+   |
+LL |     o.is_some().then_some(1)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: lone `is_*` check on Option/Result re-wraps it — chain combinators (`map`/`map_or`/`then_some`/`filter`) on the receiver instead of going through bool or `if`/`else`
+  --> $DIR/main.rs:42:5
+   |
+LL |     r.is_ok().then_some(1)
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: 6 warnings emitted
+

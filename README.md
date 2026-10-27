@@ -9,13 +9,13 @@ project-specific style rules, or readability/nesting policies.
 
 ## Layout
 
-| Path | Contents |
-|---|---|
-| `lints/` | dylint rules (Rust syntax and semantics that need type information) |
-| `checks/` | non-syntax checks (GitHub PR / issue format), run through `cargo xtask` |
-| `agents/` | per-project `AGENTS.md` assembly from TOML profiles |
-| `specs/` | human-readable rule specs, checklists, and good/bad examples |
-| `support/` | helper crates used by the dioxus lints |
+| Path       | Contents                                                                |
+| ---------- | ----------------------------------------------------------------------- |
+| `lints/`   | dylint rules (Rust syntax and semantics that need type information)     |
+| `checks/`  | non-syntax checks (GitHub PR / issue format), run through `cargo xtask` |
+| `agents/`  | per-project `AGENTS.md` assembly from TOML profiles                     |
+| `specs/`   | human-readable rule specs, checklists, and good/bad examples            |
+| `support/` | helper crates used by the dioxus lints                                  |
 
 ## Specs
 
@@ -55,36 +55,38 @@ cargo agents check ferrite                          # drift check
 
 ## Rules
 
-| Lint | What it detects | Status |
-|---|---|---|
-| `ban-unwrap` | any bare `.unwrap()` on Result/Option; use `expect("reason")` or `?`; expect messages must be English | ✅ implemented, ui-tested |
-| `max-nesting-depth` | `if`/`match`/`loop`/`for`/`while` nested deeper than 4 visual levels | ✅ implemented, ui-tested |
-| `early-return-needs-no-else` | `if c { return/break/continue } else { .. }` → drop the `else` | ✅ implemented, ui-tested |
-| `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain | ✅ implemented, ui-tested |
-| `expect-in-non-result` | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable) | ✅ implemented, ui-tested |
-| `chainable-single-statement` | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each` | ✅ implemented, ui-tested; adopted (detection-only, WARN) |
-| `let-if-else` | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — use `pick` / `pick_with` | ✅ implemented, ui-tested |
-| `redundant-branch-closures` | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — drop the closure layer (`pick` for rsx branches, `if`/`else` for plain values) | ✅ implemented, ui-tested |
-| `pick-outside-rsx` | `ui_util::pick` / `pick_with` outside `rsx!` with no rsx branch — use a plain `if`/`else` expression | ✅ implemented, ui-tested |
+| Lint                           | What it detects                                                                                                                                             | Status                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `ban-unwrap`                   | any bare `.unwrap()` on Result/Option; use `expect("reason")` or `?`; expect messages must be English                                                       | ✅ implemented, ui-tested                                 |
+| `max-nesting-depth`            | `if`/`match`/`loop`/`for`/`while` nested deeper than 4 visual levels                                                                                        | ✅ implemented, ui-tested                                 |
+| `early-return-needs-no-else`   | `if c { return/break/continue } else { .. }` → drop the `else`                                                                                              | ✅ implemented, ui-tested                                 |
+| `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain                                                                                                            | ✅ implemented, ui-tested                                 |
+| `expect-in-non-result`         | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable)                                                             | ✅ implemented, ui-tested                                 |
+| `chainable-single-statement`   | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each`                                                             | ✅ implemented, ui-tested; adopted (detection-only, WARN) |
+| `let-if-else`                  | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — use `pick` / `pick_with`                                                                            | ✅ implemented, ui-tested                                 |
+| `redundant-branch-closures`    | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — drop the closure layer (`pick` for rsx branches, `if`/`else` for plain values) | ✅ implemented, ui-tested                                 |
+| `pick-outside-rsx`             | `ui_util::pick` / `pick_with` outside `rsx!` with no rsx branch — use a plain `if`/`else` expression                                                        | ✅ implemented, ui-tested                                 |
+| `test_placement`               | `#[test]`, `#[cfg(test)]`, or `mod ..._tests;` inside a crate's `src/` tree — test code must live in `tests/`                                               | ✅ implemented, ui-tested                                 |
+| `is-check-needs-chain`         | lone `is_some`/`is_none`/`is_ok`/`is_err` on Option/Result followed by another Option/Result (`is_some().then(..)`/`.then_some(..)`, or `if is_* {..} else {..}` yielding Option/Result) — fold into a `map`/`map_or`/`filter` chain; `then_some(..).unwrap_or(..)` ending in a plain value stays sanctioned                                                  | ✅ implemented, ui-tested                                 |
 
 ## Dioxus rules
 
 The dioxus rules apply to `ui_*` / `web` crates (plus fixtures marked
 `dioxus-lint-fixture`). The rsx-structure rules parse rsx with `dioxus-rsx` 0.7.
 
-| Lint | What it detects | Default |
-|---|---|---|
-| `dioxus-rsx-no-if-else` | `if` / `if-else` as an rsx child — **FAIL via `-D dioxus_rsx_no_if_else`** | WARN |
-| `dioxus-rsx-avoid-control-flow` | `match` / `while` / `loop` / `{ let ... }` inside rsx (`for` allowed) | WARN |
-| `dioxus-rsx-nesting` | rsx element nesting deeper than one level | WARN |
-| `dioxus-rsx-one-per-component` | a `#[component]` body with more than one content `rsx!` | WARN |
-| `dioxus-rsx-cjk-text` | Chinese text inside rsx element bodies | WARN |
-| `dioxus-rsx-list-key` | `key: "{index}"` / `{i}` / `{idx}` array-index keys | WARN |
-| `dioxus-effect-self-loop` | `use_effect` writing a `Signal` it also reads | WARN |
-| `dioxus-globalsignal-discipline` | `GlobalSignal` static without a reason comment; non-static use | WARN |
-| `dioxus-props-contract` | `handle_*` props, `render_*` / `show_*: bool`, more than 7 fields | WARN |
-| `dioxus-layer-direction` | `components/layouts/utils` importing `views`; `ui_*` importing server crates | WARN |
-| `dioxus-ownership-imports` | `ui-components` importing `ui_api` / `app_contract` | WARN |
+| Lint                             | What it detects                                                              | Default |
+| -------------------------------- | ---------------------------------------------------------------------------- | ------- |
+| `dioxus-rsx-no-if-else`          | `if` / `if-else` as an rsx child — **FAIL via `-D dioxus_rsx_no_if_else`**   | WARN    |
+| `dioxus-rsx-avoid-control-flow`  | `match` / `while` / `loop` / `{ let ... }` inside rsx (`for` allowed)        | WARN    |
+| `dioxus-rsx-nesting`             | rsx element nesting deeper than one level                                    | WARN    |
+| `dioxus-rsx-one-per-component`   | a `#[component]` body with more than one content `rsx!`                      | WARN    |
+| `dioxus-rsx-cjk-text`            | Chinese text inside rsx element bodies                                       | WARN    |
+| `dioxus-rsx-list-key`            | `key: "{index}"` / `{i}` / `{idx}` array-index keys                          | WARN    |
+| `dioxus-effect-self-loop`        | `use_effect` writing a `Signal` it also reads                                | WARN    |
+| `dioxus-globalsignal-discipline` | `GlobalSignal` static without a reason comment; non-static use               | WARN    |
+| `dioxus-props-contract`          | `handle_*` props, `render_*` / `show_*: bool`, more than 7 fields            | WARN    |
+| `dioxus-layer-direction`         | `components/layouts/utils` importing `views`; `ui_*` importing server crates | WARN    |
+| `dioxus-ownership-imports`       | `ui-components` importing `ui_api` / `app_contract`                          | WARN    |
 
 Changed-files mode: set `DIOXUS_LINT_FILES` to a newline-separated list of
 repo-relative paths (e.g. `git diff --name-only`) to scan only those files;
