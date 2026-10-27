@@ -204,7 +204,7 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
 
             // ---- name-pattern: rust-file-snake ----
             let name_pattern_params = spec_rules::NamePatternParams {
-                paths_include: vec!["crates/**/*.rs".into(), "bin/**/*.rs".into()],
+                paths_include: vec!["crates/**/*.rs".into(), "platforms/**/*.rs".into(), "bin/**/*.rs".into()],
                 pattern: "^[a-z0-9_]+\\.rs$".into(),
                 message: Some("Rust 源文件名必须 snake_case".into()),
             };
@@ -227,6 +227,7 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
                     "**/*.ts".into(),
                     "**/*.js".into(),
                     "**/*.py".into(),
+                    "**/*.go".into(),
                 ],
                 paths_exclude: vec![
                     "**/tests/**".into(),
@@ -241,7 +242,7 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
                     "(?i)(password|passwd|secret|api_key|apikey|token|auth_token|access_token|private_key|connection_string)\\s*[:=]\\s*[\"'][^\"'\\s]{8,}[\"]'".into()
                 ],
                 patterns_allow: vec![
-                    r"(?i)(your-|xxx|todo|placeholder|example|test-key|mock|fake|dummy|change-me|replaceme|fixture|seed_|devpass)".into()
+                    r"(?i)(your-|xxx|todo|placeholder|example|test-key|mock|fake|dummy|change-me|replace-me|insert-|changeme|replaceme|fixture|seed_|devpass)".into()
                 ],
                 message: Some(
                     "疑似硬编码凭据（占位符/示例已滤；真假判定待语义层）".into(),
@@ -263,7 +264,7 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
         "advisory" => {
             // ---- duplicate-file: 疑似复刻既有实现 ----
             let dup_params = spec_rules::DuplicateFileParams {
-                paths_include: vec!["crates/**/*.rs".into(), "bin/**/*.rs".into()],
+                paths_include: vec!["crates/**/*.rs".into(), "platforms/**/*.rs".into(), "bin/**/*.rs".into()],
                 paths_exclude: vec!["**/tests/**".into(), "crates/ui-components/src/icons/**".into()],
                 min_tokens: Some(80),
                 min_similarity: Some(0.8),
