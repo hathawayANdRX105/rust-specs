@@ -275,6 +275,24 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
                     }
                 }
             }
+
+            // ---- css-var-mirror: theme.css 的 .dark 段镜像 :root token 集合 ----
+            let css_var_mirror_params = spec_rules::CssVarMirrorParams {
+                paths_include: vec!["crates/ui-*/**/theme.css".into()],
+                message: Some("theme.css 的 .dark 段必须是语义 :root 块的同 token 镜像".into()),
+            };
+            if let Ok(rule) = spec_rules::CssVarMirrorRule::new(
+                "css-var-mirror.theme-dark".into(),
+                &css_var_mirror_params,
+                Severity::Fail,
+            ) {
+                for f in &tracked_files {
+                    let path = Path::new(f);
+                    if let Ok(content) = std::fs::read_to_string(path) {
+                        findings.extend(rule.check_file(path, &content));
+                    }
+                }
+            }
         }
         "advisory" => {
             // ---- duplicate-file: 疑似复刻既有实现 ----

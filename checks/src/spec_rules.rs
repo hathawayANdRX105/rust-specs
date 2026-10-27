@@ -587,3 +587,148 @@ impl CyclesRule {
         None
     }
 }
+
+// ---------------------------------------------------------------------------
+// 7. css-var-mirror：`.dark` 段必须是 `:root` 块的同 token 镜像
+// ---------------------------------------------------------------------------
+
+/// css-var-mirror 参数（与 checks.toml `[kinds.css-var-mirror.*]` 对齐）。
+#[derive(Debug, Deserialize)]
+pub struct CssVarMirrorParams {
+    pub paths_include: Vec<String>,
+    pub message: Option<String>,
+}
+
+/// 检查 theme.css 的 `.dark` 块是否镜像 `:root` 块的 CSS 变量 token 集合。
+pub struct CssVarMirrorRule {
+    pub id: String,
+    pub paths_include: Vec<String>,
+    pub message: String,
+    pub default_severity: Severity,
+}
+
+impl CssVarMirrorRule {
+    pub fn new(id: String, params: &CssVarMirrorParams, default_severity: Severity) -> Result<Self, String> {
+        if params.paths_include.is_empty() {
+            return Err("css-var-mirror requires at least one paths_include glob".into());
+        }
+        Ok(Self {
+            id,
+            paths_include: params.paths_include.clone(),
+            message: params.message.clone().unwrap_or_else(|| "css-var-mirror violation".into()),
+            default_severity,
+        })
+    }
+
+    /// 检查单个 CSS 文件：`:root` 与 `.dark` 块的 token 集合必须一致。
+    pub fn check_file(&self, path: &Path, content: &str) -> Vec<Finding> {
+        let rel = path.to_string_lossy().replace('\\', "/");
+        if !path_matches(&rel, &self.paths_include, &[]) {
+            return Vec::new();
+        }
+
+        let (root_tokens, dark_tokens) = extract_theme_blocks(content);
+        let mut findings = Vec::new();
+
+        let missing: Vec<&str> = root_tokens.difference(&dark_tokens).map(|s| s.as_str()).collect();
+        for token in missing {
+            findings.push(finding(
+                &self.id,
+                self.default_severity,
+                format!("{}: `.dark` 段缺少 :root 的 token `--{token}`", self.message),
+            ));
+        }
+
+        let extra: Vec<&str> = dark_tokens.difference(&root_tokens).map(|s| s.as_str()).collect();
+        for token in extra {
+            findings.push(finding(
+                &self.id,
+                self.default_severity,
+                format!("{}: `.dark` 段包含 :root 没有的 token `--{token}`", self.message),
+            ));
+        }
+
+        findings
+    }
+}
+
+/// 去掉 CSS 注释（`/* ... */`），返回清理后的文本。
+fn strip_css_comments(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let bytes = css.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'/' && i + 1 < bytes.len() && bytes[i + 1] == b'*' {
+            i += 2;
+            while i + 1 < bytes.len() && !(bytes[i] == b'*' && bytes[i + 1] == b'/') {
+                i += 1;
+            }
+            i += 2; // skip closing '*/' (or past end)
+        } else {
+            out.push(bytes[i] as char);
+            i += 1;
+        }
+    }
+    out
+}
+
+/// 提取 `:root` 与 `.dark` 规则块中的 `--token` 集合。
+fn extract_theme_blocks(css: &str) -> (BTreeSet<String>, BTreeSet<String>) {
+    let css = strip_css_comments(css);
+    let token_re = Regex::new(r"--([a-zA-Z0-9_-]+)\s*:").expect("token regex");
+    let mut root_tokens = BTreeSet::new();
+    let mut dark_tokens = BTreeSet::new();
+
+    // 逐字符扫描顶层规则块：选择器文本到 '{'，块内容到匹配的 '}'。
+    let bytes = css.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        // 跳过字符串字面量（"..." 与 '...'），避免选择器/值里的花括号干扰。
+        match bytes[i] {
+            b'"' | b'\'' => {
+                let quote = bytes[i];
+                i += 1;
+                while i < bytes.len() && bytes[i] != quote {
+                    if bytes[i] == b'\\' {
+                        i += 1;
+                    }
+                    i += 1;
+                }
+                i += 1;
+                continue;
+            }
+            b'{' => {
+                // 找到块起点，回溯到上一个分号/右括号/行首得到选择器。
+                let selector_start = css[..i].rfind(|c: char| c == ';' || c == '}' || c == '{')
+                    .map(|p| p + 1)
+                    .unwrap_or(0);
+                let selector = css[selector_start..i].trim();
+                let mut depth = 1usize;
+                let block_start = i + 1;
+                i += 1;
+                while i < bytes.len() && depth > 0 {
+                    match bytes[i] {
+                        b'{' => depth += 1,
+                        b'}' => depth -= 1,
+                        _ => {}
+                    }
+                    i += 1;
+                }
+                let block = &css[block_start..i.saturating_sub(1)];
+                let tokens: BTreeSet<String> = token_re
+                    .captures_iter(block)
+                    .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_string()))
+                    .collect();
+                if selector.contains(":root") {
+                    root_tokens.extend(tokens);
+                } else if selector.contains(".dark") {
+                    dark_tokens.extend(tokens);
+                }
+                continue;
+            }
+            _ => i += 1,
+        }
+    }
+
+    (root_tokens, dark_tokens)
+}
