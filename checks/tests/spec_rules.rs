@@ -10,7 +10,9 @@ mod util;
 
 use std::collections::{HashMap, HashSet};
 
-use spec_rules::{DepEdgeDeny, DepEdgeParams, DepEdgeRule, DepGraph};
+use spec_rules::{
+    CssVarMirrorParams, CssVarMirrorRule, DepEdgeDeny, DepEdgeParams, DepEdgeRule, DepGraph,
+};
 use util::{Finding, Severity};
 
 fn graph_with(edges: &[(&str, &str, &str, &str)]) -> DepGraph {
@@ -74,4 +76,67 @@ fn dep_edge_debt_ignores_unrelated_edges() {
     let rule = DepEdgeRule::new("dep-edge.debt".into(), &params, Severity::Info).expect("rule");
     let findings = rule.check(&graph);
     assert!(findings.is_empty(), "expected no findings, got {findings:?}");
+}
+
+const THEME_CSS: &str = r#":root {
+  --background: #000000;
+  --foreground: #f7f8f8;
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #f7f8f8;
+}
+"#;
+
+fn mirror_rule() -> CssVarMirrorRule {
+    CssVarMirrorRule::new(
+        "css-var-mirror.theme-dark".into(),
+        &CssVarMirrorParams {
+            paths_include: vec!["crates/ui-*/**/theme.css".into()],
+            message: None,
+        },
+        Severity::Fail,
+    )
+    .expect("rule")
+}
+
+/// A `.dark` block mirroring every `:root` token must produce no findings.
+#[test]
+fn css_var_mirror_accepts_identical_token_sets() {
+    let path = std::path::Path::new("crates/ui-styles/assets/theme.css");
+    let findings = mirror_rule().check_file(path, THEME_CSS);
+    assert!(findings.is_empty(), "expected no findings, got {findings:?}");
+}
+
+/// A `.dark` block missing a `:root` token must be reported as a mirror gap.
+#[test]
+fn css_var_mirror_reports_missing_dark_token() {
+    let css = THEME_CSS.replace(
+        "color-scheme: dark;\n  --background: #000000;\n  --foreground: #f7f8f8;",
+        "color-scheme: dark;\n  --background: #000000;",
+    );
+    let path = std::path::Path::new("crates/ui-styles/assets/theme.css");
+    let findings = mirror_rule().check_file(path, &css);
+    assert!(
+        has_rule(&findings, "css-var-mirror.theme-dark", Severity::Fail),
+        "expected a FAIL finding for missing dark token, got {findings:?}"
+    );
+}
+
+/// A `.dark` block carrying a token absent from `:root` must be reported.
+#[test]
+fn css_var_mirror_reports_extra_dark_token() {
+    let css = THEME_CSS.replace(
+        "color-scheme: dark;\n  --background: #000000;",
+        "color-scheme: dark;\n  --background: #000000;\n  --extra-token: #123456;",
+    );
+    let path = std::path::Path::new("crates/ui-styles/assets/theme.css");
+    let findings = mirror_rule().check_file(path, &css);
+    assert!(
+        has_rule(&findings, "css-var-mirror.theme-dark", Severity::Fail),
+        "expected a FAIL finding for extra dark token, got {findings:?}"
+    );
 }
