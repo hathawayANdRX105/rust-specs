@@ -114,7 +114,6 @@ title = "Files that need extra care"
 bullets = [
   "`README.md` / `Cargo.toml`: adding or moving a crate means updating both (the README manifest is the responsibility record).",
   "`checks.toml`: spec policy — changing it changes rule semantics, which is a maintainer decision.",
-  "`.githooks/spec/custom/`: project-owned assets (UI contracts and similar); do not edit them as if they were rule files.",
   "`todo/`: local task briefs and audit notes (gitignored, never committed) — the deliverable is a PR, not a todo file.",
 ]
 
@@ -156,7 +155,7 @@ bullets = [
   "Run long-lived services as **session-persistent background jobs** — never `nohup … &`: the process group is reaped when the tool call ends, which shows up as the service silently dying.",
   "After starting, verify the port with `ss -ltn` and the overall state with `just dev-check`.",
   "Broad-match kills like `pkill -f cargo|rustc` are forbidden; before cleaning up a process, read `readlink /proc/<pid>/cwd` to establish ownership.",
-  "Wrap CPU-heavy commands (compile / test / install) in `.githooks/heavy <cmd>` — the quota is computed from the core count, never hard-code a CPUQuota number.",
+  "Wrap CPU-heavy commands (compile / test / install) in `scripts/heavy <cmd>` — the quota is computed from the core count, never hard-code a CPUQuota number.",
 ]
 
 [[chapter.item]]
@@ -427,7 +426,7 @@ bullets = [
 id = "long-running"
 title = "Long jobs and pointless reads"
 bullets = [
-  "Wrap compiles, tests, and installs in `.githooks/heavy`; batches expected to run long go to CI — do not grind them locally.",
+  "Wrap compiles, tests, and installs in `scripts/heavy`; batches expected to run long go to CI — do not grind them locally.",
   "Never feed a whole repository or a huge file to a review tool in one shot (rate limits + noise): review per module and feed only the diff of this change.",
   "Read gate output completely: `head`, `tail`, and `grep -v` swallow later findings; when a report says “N checks passed”, confirm N covered the part you changed.",
   "Find things with the code graph, the LSP, or search first — do not read large directories file by file.",
