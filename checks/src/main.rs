@@ -317,8 +317,44 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
                     .collect();
                 findings.extend(rule.check(&existing, &existing));
             }
-            // ---- git 信号（hotspot/coupling/defects）：需 git 历史，此处标记未实现 ----
-            eprintln!("note: git-hotspot/coupling/defects advisory rules require git-history index; skipped locally");
+            // ---- git 信号（hotspot/coupling/defects）：advisory，只给审查背景 ----
+            // scope_exclude = @generated（checks.toml [rules."GIT.*"] 口径）：
+            // 生成物 / manifest / demo 场不参与热点与耦合评分。
+            let git_exclude: Vec<String> = vec![
+                "Cargo.lock".into(),
+                "Cargo.toml".into(),
+                "README.md".into(),
+                "**/tailwind.out.css".into(),
+                "bin/kit-demo/**".into(),
+                "corpus-dump.tsv".into(),
+            ];
+            let git_params = spec_rules::GitSignalParams {
+                min_churn: 8,
+                min_cochanges: 8,
+                min_fixes: 6,
+                limit: 10,
+            };
+            let hotspot = spec_rules::GitHotspotRule::new(
+                "git-hotspot.mono".into(),
+                &git_params,
+                git_exclude.clone(),
+                Severity::Info,
+            );
+            findings.extend(hotspot.check(root_path));
+            let coupling = spec_rules::GitCouplingRule::new(
+                "git-coupling.mono".into(),
+                &git_params,
+                git_exclude.clone(),
+                Severity::Info,
+            );
+            findings.extend(coupling.check(root_path));
+            let defects = spec_rules::GitDefectsRule::new(
+                "git-defects.mono".into(),
+                &git_params,
+                git_exclude,
+                Severity::Info,
+            );
+            findings.extend(defects.check(root_path));
         }
         "semantic" => {
             eprintln!("semantic class requires jev endpoint (http://127.0.0.1:8001); not implemented in local binary");

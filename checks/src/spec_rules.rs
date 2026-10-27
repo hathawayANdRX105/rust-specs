@@ -732,3 +732,192 @@ fn extract_theme_blocks(css: &str) -> (BTreeSet<String>, BTreeSet<String>) {
 
     (root_tokens, dark_tokens)
 }
+
+// ---------------------------------------------------------------------------
+// 8. git 信号：hotspot / coupling / defects（advisory，仅背景信息）
+// ---------------------------------------------------------------------------
+
+/// git 历史中一次提交的标题与涉及文件。
+struct GitCommit {
+    subject: String,
+    files: Vec<String>,
+}
+
+/// 运行 `git log --name-only --pretty=format:<marker><subject>` 并解析。
+fn load_git_history(root: &Path) -> Vec<GitCommit> {
+    const MARKER: &str = "__RUST_SPECS_COMMIT__";
+    let output = match Command::new("git")
+        .args(["log", "--name-only", &format!("--pretty=format:{MARKER}%s")])
+        .current_dir(root)
+        .output()
+    {
+        Ok(o) => o,
+        Err(_) => return Vec::new(),
+    };
+    if !output.status.success() {
+        return Vec::new();
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut commits: Vec<GitCommit> = Vec::new();
+    for line in text.lines() {
+        if let Some(subject) = line.strip_prefix(MARKER) {
+            commits.push(GitCommit { subject: subject.trim().to_string(), files: Vec::new() });
+        } else if let Some(last) = commits.last_mut() {
+            let f = line.trim();
+            if !f.is_empty() {
+                last.files.push(f.to_string());
+            }
+        }
+    }
+    commits
+}
+
+/// git 信号规则参数。
+#[derive(Debug, Deserialize)]
+pub struct GitSignalParams {
+    pub min_churn: u32,
+    pub min_cochanges: u32,
+    pub min_fixes: u32,
+    pub limit: usize,
+}
+
+/// hotspot：文件在最近历史中被改动的提交数 ≥ min_churn。
+pub struct GitHotspotRule {
+    pub id: String,
+    pub min_churn: u32,
+    pub limit: usize,
+    pub paths_exclude: Vec<String>,
+    pub default_severity: Severity,
+}
+
+impl GitHotspotRule {
+    pub fn new(id: String, params: &GitSignalParams, paths_exclude: Vec<String>, default_severity: Severity) -> Self {
+        Self { id, min_churn: params.min_churn, limit: params.limit, paths_exclude, default_severity }
+    }
+
+    pub fn check(&self, root: &Path) -> Vec<Finding> {
+        let history = load_git_history(root);
+        let mut counts: HashMap<String, u32> = HashMap::new();
+        for commit in &history {
+            for f in &commit.files {
+                if path_matches(f, &["**".into()], &self.paths_exclude) {
+                    *counts.entry(f.clone()).or_default() += 1;
+                }
+            }
+        }
+        let mut ranked: Vec<(&String, &u32)> = counts
+            .iter()
+            .filter(|(_, c)| **c >= self.min_churn)
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+        ranked.truncate(self.limit);
+        ranked
+            .into_iter()
+            .map(|(f, c)| {
+                finding(
+                    &self.id,
+                    self.default_severity,
+                    format!("hotspot: {f} 在 {c} 个提交中被改动（≥{})", self.min_churn),
+                )
+            })
+            .collect()
+    }
+}
+
+/// coupling：两个文件在同一个提交中被改动的次数 ≥ min_cochanges。
+pub struct GitCouplingRule {
+    pub id: String,
+    pub min_cochanges: u32,
+    pub limit: usize,
+    pub paths_exclude: Vec<String>,
+    pub default_severity: Severity,
+}
+
+impl GitCouplingRule {
+    pub fn new(id: String, params: &GitSignalParams, paths_exclude: Vec<String>, default_severity: Severity) -> Self {
+        Self { id, min_cochanges: params.min_cochanges, limit: params.limit, paths_exclude, default_severity }
+    }
+
+    pub fn check(&self, root: &Path) -> Vec<Finding> {
+        let history = load_git_history(root);
+        let mut pairs: HashMap<(String, String), u32> = HashMap::new();
+        for commit in &history {
+            let files: Vec<&str> = commit
+                .files
+                .iter()
+                .filter(|f| path_matches(f, &["**".into()], &self.paths_exclude))
+                .map(|s| s.as_str())
+                .collect();
+            for (i, a) in files.iter().enumerate() {
+                for b in files.iter().skip(i + 1) {
+                    let key = if a < b { (a.to_string(), b.to_string()) } else { (b.to_string(), a.to_string()) };
+                    *pairs.entry(key).or_default() += 1;
+                }
+            }
+        }
+        let mut ranked: Vec<(&(String, String), &u32)> = pairs
+            .iter()
+            .filter(|(_, c)| **c >= self.min_cochanges)
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+        ranked.truncate(self.limit);
+        ranked
+            .into_iter()
+            .map(|((a, b), c)| {
+                finding(
+                    &self.id,
+                    self.default_severity,
+                    format!("coupling: {a} 与 {b} 在 {c} 个提交中共变（≥{})", self.min_cochanges),
+                )
+            })
+            .collect()
+    }
+}
+
+/// defects：fix 类提交涉及的文件数 ≥ min_fixes。
+pub struct GitDefectsRule {
+    pub id: String,
+    pub min_fixes: u32,
+    pub limit: usize,
+    pub paths_exclude: Vec<String>,
+    pub default_severity: Severity,
+}
+
+impl GitDefectsRule {
+    pub fn new(id: String, params: &GitSignalParams, paths_exclude: Vec<String>, default_severity: Severity) -> Self {
+        Self { id, min_fixes: params.min_fixes, limit: params.limit, paths_exclude, default_severity }
+    }
+
+    pub fn check(&self, root: &Path) -> Vec<Finding> {
+        let history = load_git_history(root);
+        let mut counts: HashMap<String, u32> = HashMap::new();
+        for commit in &history {
+            let subject = commit.subject.to_lowercase();
+            let is_fix = subject.contains("fix") || subject.contains("bug") || subject.contains("repair");
+            if !is_fix {
+                continue;
+            }
+            for f in &commit.files {
+                if path_matches(f, &["**".into()], &self.paths_exclude) {
+                    *counts.entry(f.clone()).or_default() += 1;
+                }
+            }
+        }
+        let mut ranked: Vec<(&String, &u32)> = counts
+            .iter()
+            .filter(|(_, c)| **c >= self.min_fixes)
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+        ranked.truncate(self.limit);
+        ranked
+            .into_iter()
+            .map(|(f, c)| {
+                finding(
+                    &self.id,
+                    self.default_severity,
+                    format!("defects: {f} 出现在 {c} 个 fix 提交中（≥{})", self.min_fixes),
+                )
+            })
+            .collect()
+    }
+}

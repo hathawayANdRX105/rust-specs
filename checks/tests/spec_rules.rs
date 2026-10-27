@@ -12,7 +12,9 @@ use std::collections::{HashMap, HashSet};
 
 use spec_rules::{
     CssVarMirrorParams, CssVarMirrorRule, DepEdgeDeny, DepEdgeParams, DepEdgeRule, DepGraph,
+    GitHotspotRule, GitSignalParams,
 };
+
 use util::{Finding, Severity};
 
 fn graph_with(edges: &[(&str, &str, &str, &str)]) -> DepGraph {
@@ -139,4 +141,66 @@ fn css_var_mirror_reports_extra_dark_token() {
         has_rule(&findings, "css-var-mirror.theme-dark", Severity::Fail),
         "expected a FAIL finding for extra dark token, got {findings:?}"
     );
+}
+
+use std::path::Path;
+use std::process::Command;
+
+fn git(dir: &Path, args: &[&str]) {
+    let out = Command::new("git").args(args).current_dir(dir).output().expect("git");
+    assert!(
+        out.status.success(),
+        "git {:?} failed: {}",
+        args,
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+fn init_repo(dir: &Path, commits: &[(&str, &str)]) {
+    std::fs::create_dir_all(dir).expect("create dir");
+    git(dir, &["init", "-q"]);
+    git(dir, &["config", "user.email", "test@example.com"]);
+    git(dir, &["config", "user.name", "test"]);
+    for (i, (file, content)) in commits.iter().enumerate() {
+        let path = dir.join(file);
+        std::fs::write(&path, format!("{content}\n{i}")).expect("write");
+        git(dir, &["add", "."]);
+        git(dir, &["commit", "-q", "-m", &format!("commit {i}")]);
+    }
+}
+
+/// A file changed often enough must be reported by the hotspot rule.
+#[test]
+fn git_hotspot_reports_frequent_files() {
+    let dir = std::env::temp_dir().join(format!("rust-specs-hotspot-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    init_repo(&dir, &[("a.rs", "a1"), ("a.rs", "a2"), ("a.rs", "a3"), ("b.rs", "b1")]);
+
+    let params = GitSignalParams { min_churn: 2, min_cochanges: 2, min_fixes: 2, limit: 10 };
+    let rule = GitHotspotRule::new("git-hotspot.mono".into(), &params, Vec::new(), Severity::Info);
+    let findings = rule.check(&dir);
+    assert!(
+        has_rule(&findings, "git-hotspot.mono", Severity::Info),
+        "expected hotspot INFO finding, got {findings:?}"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Files below the churn threshold must produce no hotspot findings.
+#[test]
+fn git_hotspot_ignores_rare_files() {
+    let dir = std::env::temp_dir().join(format!("rust-specs-hotspot-low-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    init_repo(&dir, &[("a.rs", "a1"), ("b.rs", "b1")]);
+
+    let params = GitSignalParams { min_churn: 2, min_cochanges: 2, min_fixes: 2, limit: 10 };
+    let rule = GitHotspotRule::new("git-hotspot.mono".into(), &params, Vec::new(), Severity::Info);
+    let findings = rule.check(&dir);
+    assert!(
+        !findings.iter().any(|f| f.rule == "git-hotspot.mono"),
+        "expected no hotspot findings, got {findings:?}"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
