@@ -1,6 +1,6 @@
 # GitHub PR 规范
 
-> 正本：ferrite `.githooks/spec/github/github_pull_requests.yaml`、`github_pr_gates.yaml`、`.github/PULL_REQUEST_TEMPLATE.md`
+> 正本：原 canon `github_pull_requests.yaml`、`github_pr_gates.yaml`（已迁移到本目录）与 ferrite `.github/PULL_REQUEST_TEMPLATE.md`
 > 适用：创建 PR、更新 PR、合并 PR 前自查。
 > 规则 ID：PR-01 ~ PR-16（由 rust-specs 的 `cargo xtask check github-pr` 逐条检查；规则正本源自 canon 的 `github_pull_requests.yaml`），GT-* 合并门禁（`gh pr merge` 时拦截）。
 > 自查命令：正文写好后先跑 `cd /home/hathaway/projects/rust-specs && cargo xtask check github-pr --title "<标题>" --body-file <正文>`（可选 `--labels`、`--branch`），再 `gh pr create`。
