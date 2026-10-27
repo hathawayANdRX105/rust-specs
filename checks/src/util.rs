@@ -9,6 +9,8 @@ pub enum Severity {
     Fail,
     /// Soft warning: reported but does not fail the check.
     Warn,
+    /// Informational: reported but never blocks (existing debt / advisory signals).
+    Info,
 }
 
 impl fmt::Display for Severity {
@@ -16,6 +18,7 @@ impl fmt::Display for Severity {
         match self {
             Severity::Fail => write!(f, "FAIL"),
             Severity::Warn => write!(f, "WARN"),
+            Severity::Info => write!(f, "INFO"),
         }
     }
 }
