@@ -173,6 +173,21 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
                 {
                     findings.extend(rule.check(&graph));
                 }
+                // ---- dep-edge.debt: harness 反向依赖 coding-harness（存量债，INFO）----
+                let dep_edge_debt_params = spec_rules::DepEdgeParams {
+                    edges_deny: vec![spec_rules::DepEdgeDeny {
+                        from: "crates/harness-*".into(),
+                        to: "crates/coding-harness-*".into(),
+                        message: Some("harness 不得依赖 coding-harness（反向禁令；存量待整改）".into()),
+                    }],
+                };
+                if let Ok(rule) = spec_rules::DepEdgeRule::new(
+                    "dep-edge.debt".into(),
+                    &dep_edge_debt_params,
+                    Severity::Info,
+                ) {
+                    findings.extend(rule.check(&graph));
+                }
 
                 // ---- dep-cycles: 依赖无环 ----
                 let cycle_rule =
