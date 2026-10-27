@@ -732,3 +732,112 @@ fn extract_theme_blocks(css: &str) -> (BTreeSet<String>, BTreeSet<String>) {
 
     (root_tokens, dark_tokens)
 }
+
+// ---------------------------------------------------------------------------
+// 9. semantic-question：jev 端点语义判决（需 JEV_API_KEY / TYPESAFE_API_KEY）
+// ---------------------------------------------------------------------------
+
+/// semantic-question 规则：对匹配文件调用 jev `/v1/systemone`，按阈值出 FAIL/WARN。
+pub struct SemanticQuestionRule {
+    pub id: String,
+    pub paths_include: Vec<String>,
+    pub paths_exclude: Vec<String>,
+    pub endpoint: String,
+    pub model: String,
+    pub questions: serde_json::Value,
+}
+
+impl SemanticQuestionRule {
+    pub fn new(
+        id: String,
+        paths_include: Vec<String>,
+        paths_exclude: Vec<String>,
+        endpoint: String,
+        model: String,
+        questions: serde_json::Value,
+    ) -> Self {
+        Self { id, paths_include, paths_exclude, endpoint, model, questions }
+    }
+
+    /// 对每个匹配文件调用 jev，返回 FAIL/WARN findings。
+    pub fn check_files(&self, tracked_files: &[PathBuf], api_key: &str) -> Vec<Finding> {
+        let mut findings = Vec::new();
+        for f in tracked_files {
+            let rel = f.to_string_lossy().replace('\\', "/");
+            if !path_matches(&rel, &self.paths_include, &self.paths_exclude) {
+                continue;
+            }
+            let Ok(content) = std::fs::read_to_string(f) else {
+                continue;
+            };
+            let state: String = content.chars().take(16_000).collect();
+            let answers = match self.judge(&state, api_key) {
+                Ok(a) => a,
+                Err(e) => {
+                    eprintln!("note: semantic judge failed for {rel}: {e}");
+                    continue;
+                }
+            };
+            if let Some(obj) = self.questions.as_object() {
+                for (qid, q) in obj {
+                    let Some(ans) = answers.get(qid) else { continue };
+                    let Some(qtype) = q.get("type").and_then(|v| v.as_str()) else { continue };
+                    let (severity, detail) = match qtype {
+                        "noul" => {
+                            let score = ans.get("noul").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let fail = q.get("fail").and_then(|v| v.as_f64()).unwrap_or(0.9);
+                            let warn = q.get("warn").and_then(|v| v.as_f64()).unwrap_or(0.7);
+                            if score >= fail {
+                                (Severity::Fail, format!("jev noul={score:.2}"))
+                            } else if score >= warn {
+                                (Severity::Warn, format!("jev noul={score:.2}"))
+                            } else {
+                                continue;
+                            }
+                        }
+                        "choice" => {
+                            let choice = ans.get("choice").and_then(|v| v.as_str()).unwrap_or("");
+                            let fail_labels: Vec<&str> = q
+                                .get("fail_labels")
+                                .and_then(|v| v.as_array())
+                                .map(|a| a.iter().filter_map(|v| v.as_str()).collect())
+                                .unwrap_or_default();
+                            if fail_labels.contains(&choice) {
+                                (Severity::Fail, format!("jev choice={choice}"))
+                            } else {
+                                continue;
+                            }
+                        }
+                        _ => continue,
+                    };
+                    let message = q
+                        .get("message")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(qid);
+                    findings.push(finding(
+                        &self.id,
+                        severity,
+                        format!("{}: {} ({detail})", message, rel),
+                    ));
+                }
+            }
+        }
+        findings
+    }
+
+    fn judge(&self, state: &str, api_key: &str) -> Result<serde_json::Value, String> {
+        let url = format!("{}/v1/systemone", self.endpoint.trim_end_matches('/'));
+        let body = serde_json::json!({
+            "state": state,
+            "model": self.model,
+            "questions": self.questions,
+        });
+        let resp = ureq::post(&url)
+            .set("Authorization", &format!("Bearer {api_key}"))
+            .set("x-api-key", api_key)
+            .send_json(body)
+            .map_err(|e| e.to_string())?;
+        let json: serde_json::Value = resp.into_json().map_err(|e| e.to_string())?;
+        Ok(json.get("answers").cloned().unwrap_or_default())
+    }
+}

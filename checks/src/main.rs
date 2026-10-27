@@ -321,7 +321,60 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
             eprintln!("note: git-hotspot/coupling/defects advisory rules require git-history index; skipped locally");
         }
         "semantic" => {
-            eprintln!("semantic class requires jev endpoint (http://127.0.0.1:8001); not implemented in local binary");
+            // ---- semantic-question.api-security：jev 端点语义判决 ----
+            let api_key = std::env::var("JEV_API_KEY")
+                .or_else(|_| std::env::var("TYPESAFE_API_KEY"));
+            let api_key = match api_key {
+                Ok(k) => k,
+                Err(_) => {
+                    eprintln!("note: semantic class requires JEV_API_KEY or TYPESAFE_API_KEY env");
+                    return report(&findings);
+                }
+            };
+            let questions = serde_json::json!({
+                "input_validation_missing": {
+                    "type": "noul",
+                    "instructions": "Does this file contain public API endpoints that handle user input without validation or sanitization?",
+                    "fail": 0.85,
+                    "warn": 0.6,
+                    "message": "公共 API 端点可能缺少输入校验"
+                },
+                "output_sanitization_missing": {
+                    "type": "noul",
+                    "instructions": "Does this file contain public API endpoints that output data without proper sanitization?",
+                    "fail": 0.85,
+                    "warn": 0.6,
+                    "message": "公共 API 端点可能缺少输出净化"
+                },
+                "error_handling_exposure": {
+                    "type": "choice",
+                    "instructions": "Classify this file's error handling in public API endpoints.",
+                    "fail": 0.9,
+                    "warn": 0.7,
+                    "fail_labels": ["risky"],
+                    "message": "公共 API 错误处理可能泄露内部信息"
+                },
+                "authentication_missing": {
+                    "type": "noul",
+                    "instructions": "Does this file contain API endpoints that should require authentication but don't validate any auth tokens?",
+                    "fail": 0.9,
+                    "warn": 0.7,
+                    "message": "公共 API 端点可能缺少认证"
+                },
+            });
+            let rule = spec_rules::SemanticQuestionRule::new(
+                "semantic-question.api-security".into(),
+                vec!["crates/api-*/**/*.rs".into(), "crates/gateway-*/**/*.rs".into()],
+                vec!["**/tests/**".into(), "**/test_*.rs".into()],
+                "http://127.0.0.1:8001".into(),
+                "jev-latest".into(),
+                questions,
+            );
+            let tracked: Vec<PathBuf> = tracked_files
+                .iter()
+                .map(|p| PathBuf::from(p.as_str()))
+                .collect();
+            findings.extend(rule.check_files(&tracked, &api_key));
         }
         other => {
             eprintln!("unknown class: {other} (use deterministic | advisory | semantic)");
