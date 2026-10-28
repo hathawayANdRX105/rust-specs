@@ -21,6 +21,14 @@ fn good_pick(c: bool) {
     };
 }
 
+// Good: hoisting pick (a function call, not an if expression) into a let is
+// not this lint's job — only `Expr::If` initializers are inspected.
+#[cfg(any())]
+fn good_hoisted_pick(c: bool) {
+    let node = pick(c, rsx! { span { "a" } }, rsx! { span { "b" } });
+    let _ = rsx! { div { {node} } };
+}
+
 // Good: an ordinary let-if without an rsx branch.
 #[cfg(any())]
 fn good_plain(c: bool) {
