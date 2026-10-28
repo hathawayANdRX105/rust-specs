@@ -35,47 +35,59 @@ fn has_rule(findings: &[Finding], rule: &str, severity: Severity) -> bool {
         .any(|f| f.rule == rule && f.severity == severity)
 }
 
-/// A harness crate depending on a coding-harness crate must be reported by
-/// `dep-edge.debt` with Info severity (existing debt, never blocking).
+/// The page layer may depend on `harness-protocol` (wire vocabulary) but on no
+/// other harness member: the daemon kernel edge must fail.
 #[test]
-fn dep_edge_debt_reports_harness_to_coding_harness_as_info() {
-    let graph = graph_with(&[
-        ("harness-daemon", "crates/harness-daemon", "coding-harness-session", "crates/coding-harness-session"),
-    ]);
+fn dep_edge_domain_fails_ui_to_harness_kernel() {
+    let graph = graph_with(&[(
+        "ui-coding",
+        "crates/ui-coding",
+        "harness-daemon",
+        "crates/harness-daemon",
+    )]);
     let params = DepEdgeParams {
-        edges_deny: vec![DepEdgeDeny {
-            from: "crates/harness-*".into(),
-            to: "crates/coding-harness-*".into(),
-            message: Some("harness 不得依赖 coding-harness".into()),
-        }],
+        edges_deny: vec![
+            DepEdgeDeny {
+                from: "crates/ui-*".into(),
+                to: "crates/harness-daemon".into(),
+                message: None,
+            },
+            DepEdgeDeny {
+                from: "crates/ui-*".into(),
+                to: "crates/harness-tools".into(),
+                message: None,
+            },
+        ],
     };
-    let rule = DepEdgeRule::new("dep-edge.debt".into(), &params, Severity::Info).expect("rule");
+    let rule = DepEdgeRule::new("dep-edge.domain".into(), &params, Severity::Fail).expect("rule");
     let findings = rule.check(&graph);
     assert!(
-        has_rule(&findings, "dep-edge.debt", Severity::Info),
-        "expected an INFO finding, got {findings:?}"
-    );
-    assert!(
-        !findings.iter().any(|f| f.severity == Severity::Fail),
-        "debt must never be Fail: {findings:?}"
+        has_rule(&findings, "dep-edge.domain", Severity::Fail),
+        "expected a FAIL finding, got {findings:?}"
     );
 }
 
-/// Edges outside the deny globs must produce no findings.
+/// `harness-protocol` is deliberately absent from the page-layer deny list (the
+/// UI projection consumes its DTOs), so that edge stays clean.
 #[test]
-fn dep_edge_debt_ignores_unrelated_edges() {
+fn dep_edge_domain_allows_ui_to_harness_protocol() {
     let graph = graph_with(&[
-        ("ui-components", "crates/ui-components", "ui-pages", "crates/ui-pages"),
-        ("web", "bin/web", "ui-pages", "crates/ui-pages"),
+        (
+            "ui-coding",
+            "crates/ui-coding",
+            "harness-protocol",
+            "crates/harness-protocol",
+        ),
+        ("ui-pages", "crates/ui-pages", "ui-components", "crates/ui-components"),
     ]);
     let params = DepEdgeParams {
         edges_deny: vec![DepEdgeDeny {
-            from: "crates/harness-*".into(),
-            to: "crates/coding-harness-*".into(),
+            from: "crates/ui-*".into(),
+            to: "crates/harness-daemon".into(),
             message: None,
         }],
     };
-    let rule = DepEdgeRule::new("dep-edge.debt".into(), &params, Severity::Info).expect("rule");
+    let rule = DepEdgeRule::new("dep-edge.domain".into(), &params, Severity::Fail).expect("rule");
     let findings = rule.check(&graph);
     assert!(findings.is_empty(), "expected no findings, got {findings:?}");
 }

@@ -157,10 +157,21 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
                     edges_deny: vec![
                         spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/api-*".into(), message: None },
                         spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/gateway-*".into(), message: None },
-                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/coding-harness-*".into(), message: None },
+                        // The page layer may depend on harness-protocol (wire vocabulary) and
+                        // nothing else from the harness domain: every other member is a host
+                        // capability or the daemon kernel. After the coding-prefix retirement
+                        // (ferrite doc 16) the old `-> crates/coding-harness-*` glob matched
+                        // nothing, so the rule is spelled against the real members.
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-agent-loop".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-compaction".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-config".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-daemon".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-llm".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-mcp".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-session".into(), message: None },
+                        spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/harness-tools".into(), message: None },
                         spec_rules::DepEdgeDeny { from: "crates/ui-*".into(), to: "crates/app-db/**".into(), message: None },
                         spec_rules::DepEdgeDeny { from: "crates/api-*".into(), to: "crates/ui-*".into(), message: None },
-                        spec_rules::DepEdgeDeny { from: "crates/api-*".into(), to: "crates/coding-harness-*".into(), message: None },
                         spec_rules::DepEdgeDeny { from: "crates/**".into(), to: "bin/**".into(), message: None },
                         spec_rules::DepEdgeDeny { from: "crates/**".into(), to: "platforms/**".into(), message: None },
                         spec_rules::DepEdgeDeny { from: "bin/**".into(), to: "platforms/**".into(), message: None },
@@ -171,21 +182,6 @@ fn run_structure(args: &StructureArgs) -> ExitCode {
                 if let Ok(rule) =
                     spec_rules::DepEdgeRule::new("dep-edge.domain".into(), &dep_edge_params, Severity::Fail)
                 {
-                    findings.extend(rule.check(&graph));
-                }
-                // ---- dep-edge.debt: harness 反向依赖 coding-harness（存量债，INFO）----
-                let dep_edge_debt_params = spec_rules::DepEdgeParams {
-                    edges_deny: vec![spec_rules::DepEdgeDeny {
-                        from: "crates/harness-*".into(),
-                        to: "crates/coding-harness-*".into(),
-                        message: Some("harness 不得依赖 coding-harness（反向禁令；存量待整改）".into()),
-                    }],
-                };
-                if let Ok(rule) = spec_rules::DepEdgeRule::new(
-                    "dep-edge.debt".into(),
-                    &dep_edge_debt_params,
-                    Severity::Info,
-                ) {
                     findings.extend(rule.check(&graph));
                 }
 
