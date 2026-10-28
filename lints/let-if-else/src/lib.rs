@@ -216,6 +216,17 @@ fn view(c: bool) {
     }
 
     #[test]
+    fn ignores_hoisted_pick() {
+        let source = r#"
+fn view(c: bool) {
+    let node = pick(c, rsx! { span { "a" } }, rsx! { span { "b" } });
+    rsx! { div { {node} } }
+}
+"#;
+        assert!(findings(source).is_empty());
+    }
+
+    #[test]
     fn ignores_if_inside_rsx() {
         let source = r#"
 fn view(c: bool) {

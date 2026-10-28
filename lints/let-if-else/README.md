@@ -45,6 +45,10 @@ let class = if selected { "ui-item-selected" } else { "ui-item" };
 let variant = if active { ButtonVariant::Secondary } else { ButtonVariant::Ghost };
 ```
 
+A `let` bound directly to `pick(cond, rsx! { .. }, rsx! { .. })` is **not**
+reported either: this lint inspects `if` expressions only, and a `pick` /
+`pick_with` call is a function call, never an `Expr::If`.
+
 ## Why
 
 `pick` / `pick_with` keep the choice at the call site, in one expression. A

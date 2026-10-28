@@ -13,6 +13,6 @@ jobs:
       - name: Install pinned toolchain
         run: rustup toolchain install nightly-2026-08-20 --profile minimal --component rustc-dev --component llvm-tools-preview
       - name: Install dylint-link
-        run: cargo install dylint-link --version 6.2.0 --locked
+        run: cargo install dylint-link --version 6.3.0 --locked
       - name: Test
         run: cargo test --workspace
