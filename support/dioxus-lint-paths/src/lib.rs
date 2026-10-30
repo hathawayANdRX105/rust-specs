@@ -5,14 +5,6 @@
 
 use std::path::Path;
 
-/// Generated icon modules are machine-generated SVG wrappers, not
-/// hand-written rsx. The old canon scope excluded
-/// `crates/ui-components/src/icons/**`; every `.../icons/...` path is skipped.
-pub fn is_generated_icon_path(path: &Path) -> bool {
-    let text = path.to_string_lossy().replace('\\', "/");
-    text.contains("/icons/") || text.contains("crates/ui-components/src/icons/")
-}
-
 /// Match a path against the `DIOXUS_LINT_FILES` diff list.
 ///
 /// Entries are repo-relative paths; matching is suffix-based so an absolute
@@ -35,7 +27,10 @@ mod tests {
 
     #[test]
     fn empty_list_scans_everything() {
-        assert!(matches_file_list(Path::new("/repo/crates/ui-x/src/a.rs"), &[]));
+        assert!(matches_file_list(
+            Path::new("/repo/crates/ui-x/src/a.rs"),
+            &[]
+        ));
     }
 
     #[test]
@@ -53,18 +48,5 @@ mod tests {
             path,
             &[entry("crates/ui-y/src/a.rs"), entry("crates/ui-x/src/a.rs")]
         ));
-    }
-
-    #[test]
-    fn generated_icon_paths_are_skipped() {
-        assert!(is_generated_icon_path(Path::new(
-            "/repo/crates/ui-components/src/icons/si.rs"
-        )));
-        assert!(is_generated_icon_path(Path::new(
-            "/repo/crates/ui-x/src/icons/mod.rs"
-        )));
-        assert!(!is_generated_icon_path(Path::new(
-            "/repo/crates/ui-x/src/icon.rs"
-        )));
     }
 }

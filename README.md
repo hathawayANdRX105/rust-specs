@@ -90,11 +90,10 @@ The dioxus rules apply to `ui_*` / `web` crates (plus fixtures marked
 
 Changed-files mode: set `DIOXUS_LINT_FILES` to a newline-separated list of
 repo-relative paths (e.g. `git diff --name-only`) to scan only those files;
-unset or empty scans everything. Generated icon modules are always excluded:
-any path containing `/icons/` (mainly
-`crates/ui-components/src/icons/**`) is skipped, even when it appears in the
-diff list. `bin/kit-demo` is outside the `ui_*` / `web` crate scope and is not
-scanned.
+unset or empty scans everything. The calling repository owns the file list, so
+generated sources (icon modules and the like) are excluded there rather than by a
+path rule baked into the lints. `bin/kit-demo` is outside the `ui_*` / `web`
+crate scope and is not scanned.
 
 ## Usage
 
