@@ -4,7 +4,7 @@
 extern crate rustc_lint;
 extern crate rustc_span;
 
-use dioxus_lint_paths::{is_generated_icon_path, matches_file_list};
+use dioxus_lint_paths::matches_file_list;
 use rustc_lint::{LateContext, LintContext};
 use rustc_span::{FileName, SourceFile, Span};
 use std::path::Path;
@@ -16,13 +16,7 @@ use std::sync::OnceLock;
 /// (the output of `git diff --name-only`). When it is unset or empty every
 /// file is scanned. Matching is suffix-based: a file passes when its path
 /// ends with one of the listed entries.
-///
-/// Generated icon modules are always skipped, even when they appear in the
-/// diff list: they are machine-generated SVG wrappers, not hand-written rsx.
 pub fn should_scan(path: &Path) -> bool {
-    if is_generated_icon_path(path) {
-        return false;
-    }
     match file_list() {
         Some(list) => matches_file_list(path, list),
         None => true,
