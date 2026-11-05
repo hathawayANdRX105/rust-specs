@@ -14,28 +14,27 @@ dylint_linting::declare_late_lint! {
     /// Bans hoisting an `if` / `if-else` whose branches build `rsx!` into a
     /// `let` binding.
     ///
-    /// The rule applies to every crate. Moving the branch out of rsx satisfies
-    /// `dioxus-rsx-no-if-else` on a technicality but keeps the component's view
-    /// split into a branch block. The project already has a single-expression
-    /// form for `Element` branches:
-    /// `ui_util::pick::pick(cond, rsx! { .. }, rsx! { .. })`. Use
-    /// `pick_with(cond, || .., || ..)` only when a branch must stay lazy.
+    /// The rule applies to every crate. Hoisting the branch out of rsx keeps the
+    /// component's view split into a branch block — write the branch inside the
+    /// `rsx!` body directly instead, or extract a child component / slot. Plain
+    /// `if` / `if-else` as an rsx child is not restricted by any rule in this
+    /// library.
     ///
     /// A `let` whose branches are plain values is not reported: there the
-    /// `if` / `else` expression is the preferred form, and `pick` is for rsx
-    /// branches only (see `pick-outside-rsx`).
+    /// `if` / `else` expression is the preferred form.
     ///
     /// ### Why is this bad?
     ///
     /// A `let node = if ..` block adds a second view-shaped value and pushes
-    /// the reader through a branch before reaching the returned rsx. `pick` /
-    /// `pick_with` keep the choice at the call site, in one expression.
+    /// the reader through a branch before reaching the returned rsx. Write the
+    /// branch inside the `rsx!` body directly, or extract a child component /
+    /// slot.
     ///
     /// ### Known problems
     ///
     /// Source-text based; files that fail to parse are skipped. Only `let`
     /// initializers are inspected, so an `if` written directly inside rsx is
-    /// left to `dioxus-rsx-no-if-else` (no double reporting). Ordinary
+    /// allowed by this lint — nothing here restricts it. Ordinary
     /// `let x = if ..` values without an `rsx!` branch are not reported.
     ///
     /// ### Example
@@ -50,16 +49,16 @@ dylint_linting::declare_late_lint! {
     /// ```rust
     /// rsx! {
     ///     div {
-    ///         { pick(show, rsx! { span { "visible" } }, rsx! {}) }
+    ///         if show { span { "visible" } }
     ///     }
     /// }
     /// ```
     pub LET_IF_ELSE,
     Warn,
-    "rsx branches hoisted into a let-if-else; use pick / pick_with"
+    "rsx branches hoisted into a let-if-else; write the branch inside rsx instead"
 }
 
-const MSG: &str = "不要把 rsx 分支 hoist 成 let-if-else：用 pick(cond, rsx!{...}, rsx!{...})；只有未选分支有副作用/集合遍历时才用 pick_with";
+const MSG: &str = "不要把 rsx 分支 hoist 成 let-if-else：把分支直接写进 rsx! 里，或抽成子组件 / 插槽";
 
 /// One finding produced from source text (line/column are 1-based line and
 /// 0-based column, matching `proc_macro2`'s span-locations).

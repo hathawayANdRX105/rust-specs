@@ -36,7 +36,7 @@ fn good_plain(c: bool) {
     let _ = n;
 }
 
-// Good: an if inside rsx is dioxus-rsx-no-if-else's job, not this lint's.
+// Good: an if inside rsx is unrestricted now — not this lint's job.
 #[cfg(any())]
 fn good_rsx_if(c: bool) {
     let _ = rsx! {

@@ -15,9 +15,9 @@ dylint_linting::declare_late_lint! {
     /// Avoids `match`, `while`, `loop` and `{ let ...; ... }` blocks inside
     /// `rsx!` bodies.
     ///
-    /// `if` / `if-else` is a separate hard rule: `dioxus-rsx-no-if-else`
-    /// (FAIL via `-D`). `for` is allowed by design; only its body is still
-    /// inspected for nested control flow.
+/// `if` / `if-else` is not restricted by any rule in this library. `for` is
+/// allowed by design; only its body is still inspected for nested control
+/// flow.
     ///
     /// ### Why is this bad?
     ///

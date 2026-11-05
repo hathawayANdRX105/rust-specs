@@ -1,8 +1,7 @@
 # dioxus-rsx-avoid-control-flow
 
 Avoids `match`, `while`, `loop` and `{ let ...; ... }` blocks inside `rsx!`
-bodies. `if` / `if-else` is a separate hard rule:
-[`dioxus-rsx-no-if-else`](../dioxus-rsx-no-if-else/README.md) (FAIL via `-D`).
+bodies. `if` / `if-else` is not restricted by any rule in this library.
 
 | | |
 |---|---|
@@ -21,7 +20,7 @@ bodies. `if` / `if-else` is a separate hard rule:
 | `loop` inside an rsx child | WARN |
 | `{ let ...; ... }` raw expression block | WARN |
 | `for` loop | allowed |
-| `if` / `if-else` | not this lint; see `dioxus-rsx-no-if-else` (FAIL) |
+| `if` / `if-else` | not restricted by any rule here |
 
 Only the **top level** of a raw expression is judged. Rust inside closures
 (`.map(|x| match ...)`) and attribute expressions (`onclick: move |_| match ...`)

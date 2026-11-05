@@ -12,57 +12,49 @@ let node = if show {
 rsx! { div { {node} } }
 ```
 
-This satisfies `dioxus-rsx-no-if-else` on a technicality but keeps the view
-split into a branch block. Use the project's single-expression helpers from
-`ui_util::pick` instead.
+Keeping the branch hoisted in a `let` adds an indirection before the returned
+rsx. Write the branch inside the `rsx!` body directly — plain `if` / `if-else`
+as an rsx child is not restricted by any rule in this library — or extract a
+child component / slot.
 
 ## Good
 
-For `Element` branches, use `pick` directly:
+For `Element` branches, write the branch inline in the `rsx!` body:
 
 ```rust
 rsx! {
     div {
-        { pick(show, rsx! { span { "visible" } }, rsx! {}) }
+        if show { span { "visible" } }
     }
 }
 ```
 
-Use `pick_with` only when an unselected branch must not run (it has side
-effects or collects/iterates):
-
-```rust
-{ pick_with(show, || load_page(), || load_empty()) }
-```
-
 A `let` whose branches are plain values is **not** reported by this rule.
-There the `if` / `else` expression is the preferred form, and `pick` is
-reserved for rsx branches — see
-[`pick-outside-rsx`](../pick-outside-rsx/README.md):
+There the `if` / `else` expression is the preferred form.
 
 ```rust
 let class = if selected { "ui-item-selected" } else { "ui-item" };
 let variant = if active { ButtonVariant::Secondary } else { ButtonVariant::Ghost };
 ```
 
-A `let` bound directly to `pick(cond, rsx! { .. }, rsx! { .. })` is **not**
-reported either: this lint inspects `if` expressions only, and a `pick` /
-`pick_with` call is a function call, never an `Expr::If`.
+A `let` bound to anything that is not an `if` expression is **not** reported:
+this lint inspects `if` expressions only — a function call is never an
+`Expr::If`.
 
 ## Why
 
-`pick` / `pick_with` keep the choice at the call site, in one expression. A
-`let node = if ..` block adds a second view-shaped value and pushes the reader
-through a branch before reaching the returned rsx.
+A `let node = if ..` block adds a second view-shaped value and pushes the reader
+through a branch before reaching the returned rsx. Write the branch inside the
+`rsx!` body directly, or extract a child component / slot.
 
 ## Division of labour
 
-- `dioxus-rsx-no-if-else` — an `if` written **inside** the `rsx!` body.
-- `let-if-else` — the same branch hoisted **out** of rsx into a `let`.
+- `let-if-else` — an `if` / `if-else` with `rsx!` branches hoisted into a `let`.
 
-Both are active; neither reports the other's pattern. `for` inside rsx is
-allowed. `match` / `while` / `loop` / `{ let ... }` inside rsx are handled by
-`dioxus-rsx-avoid-control-flow` at WARN.
+`for` inside rsx is allowed. `match` / `while` / `loop` / `{ let ... }`
+inside rsx are handled by `dioxus-rsx-avoid-control-flow` at WARN. Plain
+`if` / `if-else` written directly inside `rsx!` is not restricted by any rule
+in this library.
 
 ## Known problems
 

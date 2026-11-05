@@ -2,7 +2,7 @@
 name = "dioxus_rsx_avoid_control_flow"
 version = "0.1.0"
 authors = ["authors go here"]
-description = "avoid match/while/loop and let blocks inside rsx! bodies (if is handled by dioxus-rsx-no-if-else)"
+description = "avoid match/while/loop and let blocks inside rsx! bodies"
 edition = "2024"
 publish = false
 

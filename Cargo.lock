@@ -472,18 +472,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dioxus_rsx_no_if_else"
-version = "0.1.0"
-dependencies = [
- "clippy_utils",
- "dioxus-lint-scope",
- "dioxus-rsx",
- "dioxus-rsx-scan",
- "dylint_linting",
- "dylint_testing",
-]
-
-[[package]]
 name = "dioxus_rsx_one_per_component"
 version = "0.1.0"
 dependencies = [
@@ -1131,17 +1119,6 @@ name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
-
-[[package]]
-name = "pick_outside_rsx"
-version = "0.1.0"
-dependencies = [
- "clippy_utils",
- "dylint_linting",
- "dylint_testing",
- "proc-macro2",
- "syn 2.0.119",
-]
 
 [[package]]
 name = "pin-project-lite"

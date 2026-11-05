@@ -32,10 +32,10 @@ dylint_linting::declare_late_lint! {
     /// the branches build:
     ///
     /// ```rust
-    /// // rsx branches: pick is the only single-expression form allowed
-    /// let node = pick(cond, rsx! { span { "a" } }, rsx! { span { "b" } });
+    /// // rsx branches: write the branch inline in rsx!
+    /// let node = if cond { rsx! { span { "a" } } } else { rsx! { span { "b" } } };
     ///
-    /// // plain values: a plain if/else, not pick (see pick-outside-rsx)
+    /// // plain values: a plain if/else
     /// let n = if cond { 1 } else { 2 };
     /// ```
     ///
@@ -57,7 +57,7 @@ dylint_linting::declare_late_lint! {
     "redundant no-arg closures on both branches; drop the closure layer"
 }
 
-const MSG: &str = "两个分支都是无参闭包且返回同一类型，闭包是多余的：rsx 分支用 pick(cond, a, b)，普通值用 if/else";
+const MSG: &str = "两个分支都是无参闭包且返回同一类型，闭包是多余的：rsx 分支内联 if/else，普通值用 if/else";
 
 /// One finding produced from source text (line/column are 1-based line and
 /// 0-based column, matching `proc_macro2`'s span-locations).

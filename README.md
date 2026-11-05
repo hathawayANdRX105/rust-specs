@@ -63,9 +63,8 @@ cargo agents check ferrite                          # drift check
 | `consecutive-same-shape-loops` | ≥3 same-shape push loops in one function → chain                                                                                                            | ✅ implemented, ui-tested                                 |
 | `expect-in-non-result`         | `.expect()` on Result/Option in a function that does not return Result/Option (`?` unavailable)                                                             | ✅ implemented, ui-tested                                 |
 | `chainable-single-statement`   | single-expression `if let` / `for` bodies that could be chained into `is_some_and` / `for_each`                                                             | ✅ implemented, ui-tested; adopted (detection-only, WARN) |
-| `let-if-else`                  | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — use `pick` / `pick_with`                                                                            | ✅ implemented, ui-tested                                 |
-| `redundant-branch-closures`    | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — drop the closure layer (`pick` for rsx branches, `if`/`else` for plain values) | ✅ implemented, ui-tested                                 |
-| `pick-outside-rsx`             | `ui_util::pick` / `pick_with` outside `rsx!` with no rsx branch — use a plain `if`/`else` expression                                                        | ✅ implemented, ui-tested                                 |
+| `let-if-else`                  | `let x = if ... { rsx!{} } else { rsx!{} };` hoisting — write the branch inside the `rsx!` body directly                                                        | ✅ implemented, ui-tested                                 |
+| `redundant-branch-closures`    | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — drop the closure layer                                                             | ✅ implemented, ui-tested                                 |
 | `test_placement`               | `#[test]`, `#[cfg(test)]`, or `mod ..._tests;` inside a crate's `src/` tree — test code must live in `tests/`                                               | ✅ implemented, ui-tested                                 |
 | `is-check-needs-chain`         | lone `is_some`/`is_none`/`is_ok`/`is_err` on Option/Result followed by another Option/Result (`is_some().then(..)`/`.then_some(..)`, or `if is_* {..} else {..}` yielding Option/Result) — fold into a `map`/`map_or`/`filter` chain; `then_some(..).unwrap_or(..)` ending in a plain value stays sanctioned                                                  | ✅ implemented, ui-tested                                 |
 
@@ -76,7 +75,6 @@ The dioxus rules apply to `ui_*` / `web` crates (plus fixtures marked
 
 | Lint                             | What it detects                                                              | Default |
 | -------------------------------- | ---------------------------------------------------------------------------- | ------- |
-| `dioxus-rsx-no-if-else`          | `if` / `if-else` as an rsx child — **FAIL via `-D dioxus_rsx_no_if_else`**   | WARN    |
 | `dioxus-rsx-avoid-control-flow`  | `match` / `while` / `loop` / `{ let ... }` inside rsx (`for` allowed)        | WARN    |
 | `dioxus-rsx-nesting`             | rsx element nesting deeper than one level                                    | WARN    |
 | `dioxus-rsx-one-per-component`   | a `#[component]` body with more than one content `rsx!`                      | WARN    |

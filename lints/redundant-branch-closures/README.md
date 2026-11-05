@@ -20,15 +20,13 @@ extra shell. Pass the values directly.
 
 Which form to use depends on what the branches build.
 
-rsx branches — `pick` is the only single-expression form, because
-`dioxus-rsx-no-if-else` bans `if` / `else` as an rsx child:
+rsx branches — write the branch inline in the `rsx!` body:
 
 ```rust
 let node = pick(cond, rsx! { span { "a" } }, rsx! { span { "b" } });
 ```
 
-Plain values — a plain `if` / `else`. Do not use `pick` here; see
-[`pick-outside-rsx`](../pick-outside-rsx/README.md):
+Plain values — a plain `if` / `else`.
 
 ```rust
 let n = if cond { 1 } else { 2 };
