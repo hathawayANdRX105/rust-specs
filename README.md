@@ -67,6 +67,7 @@ cargo agents check ferrite                          # drift check
 | `redundant-branch-closures`    | both branches of a `let`-bound `pick_with` / `if-else` are no-arg closures — drop the closure layer                                                             | ✅ implemented, ui-tested                                 |
 | `test_placement`               | `#[test]`, `#[cfg(test)]`, or `mod ..._tests;` inside a crate's `src/` tree — test code must live in `tests/`                                               | ✅ implemented, ui-tested                                 |
 | `is-check-needs-chain`         | lone `is_some`/`is_none`/`is_ok`/`is_err` on Option/Result followed by another Option/Result (`is_some().then(..)`/`.then_some(..)`, or `if is_* {..} else {..}` yielding Option/Result) — fold into a `map`/`map_or`/`filter` chain; `then_some(..).unwrap_or(..)` ending in a plain value stays sanctioned                                                  | ✅ implemented, ui-tested                                 |
+| `cjk-in-code`                  | Chinese text in comments, string literals and identifiers outside test code: comments are never exempt, strings are exempt in test scope, i18n/data paths and rsx `data-*` attributes                                                                                                                                                                         | ✅ implemented, ui snapshot verified                      |
 
 ## Dioxus rules
 

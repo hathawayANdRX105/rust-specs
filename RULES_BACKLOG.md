@@ -10,15 +10,16 @@ Only rules that neither clippy nor canon's RUST-IDIOM can express belong here.
 
 ## Candidates for this repo (need type info / project policy)
 
-| Rule                                | Why dylint                                                                           |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| ban-unwrap (DONE)                   | project policy: unwrap banned, expect must be English                                |
-| expect-in-non-result (DONE)         | detect `.expect` in non-Result fns where `?` is unavailable; type info needed        |
-| max-nesting-depth (DONE)            | configurable threshold (e.g. 4), HIR block nesting                                   |
-| consecutive-same-shape-loops (DONE) | N loops with same shape → chain; syn can do but weak across fns                      |
-| early-return-needs-no-else (DONE)   | `if c { return .. } else { .. }` → drop else                                         |
-| test_placement (DONE)               | test code must live in `tests/`, not in `src/`; file-path based, no type info needed |
-| is-check-needs-chain (DONE)     | lone `is_some`/`is_none`/`is_ok`/`is_err` on Option/Result feeding another Option/Result → combinator chain; bool→Option→plain-value chains deliberately NOT reported (sanctioned) |
+| Rule                                | Why dylint                                                                                                                                                                                                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ban-unwrap (DONE)                   | project policy: unwrap banned, expect must be English                                                                                                                                                                                                                                                |
+| expect-in-non-result (DONE)         | detect `.expect` in non-Result fns where `?` is unavailable; type info needed                                                                                                                                                                                                                        |
+| max-nesting-depth (DONE)            | configurable threshold (e.g. 4), HIR block nesting                                                                                                                                                                                                                                                   |
+| consecutive-same-shape-loops (DONE) | N loops with same shape → chain; syn can do but weak across fns                                                                                                                                                                                                                                      |
+| early-return-needs-no-else (DONE)   | `if c { return .. } else { .. }` → drop else                                                                                                                                                                                                                                                         |
+| test_placement (DONE)               | test code must live in `tests/`, not in `src/`; file-path based, no type info needed                                                                                                                                                                                                                 |
+| is-check-needs-chain (DONE)         | lone `is_some`/`is_none`/`is_ok`/`is_err` on Option/Result feeding another Option/Result → combinator chain; bool→Option→plain-value chains deliberately NOT reported (sanctioned)                                                                                                                   |
+| cjk-in-code (DONE)                  | Chinese in comments, string literals and identifiers outside test code; comments are never exempt, literals are exempt in test scope, i18n/data paths and rsx `data-*` attributes; whole-repo source-text scan (a small lexer + `syn` for the exemptions), rsx copy stays with `dioxus-rsx-cjk-text` |
 
 ## Process
 

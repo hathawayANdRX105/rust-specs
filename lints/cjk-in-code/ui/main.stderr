@@ -1,0 +1,46 @@
+warning: Chinese text in a comment; comments (doc comments included) must be in English
+  --> $DIR/main.rs:5:1
+   |
+LL | // 行内注释 → reported
+   | ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(cjk_in_code)]` on by default
+
+warning: Chinese text in a comment; comments (doc comments included) must be in English
+  --> $DIR/main.rs:7:1
+   |
+LL | /// 文档注释 → reported
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: Chinese identifier; identifiers must be in English
+  --> $DIR/main.rs:21:9
+   |
+LL |     let 保存 = 1;
+   |         ^^^^
+
+warning: Chinese identifier; identifiers must be in English
+  --> $DIR/main.rs:22:20
+   |
+LL |     println!("{}", 保存);
+   |                    ^^^^
+
+warning: Chinese text in a comment; comments (doc comments included) must be in English
+  --> $DIR/main.rs:27:5
+   |
+LL |     // 测试里的中文注释 → reported
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: Chinese text in a comment; comments (doc comments included) must be in English
+  --> $DIR/main.rs:36:5
+   |
+LL |     // 生产代码里的中文注释 → reported
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: Chinese text in a string literal; keep non-test string content in English (a test may use Chinese)
+  --> $DIR/main.rs:37:16
+   |
+LL |     let copy = "保存按钮";
+   |                ^^^^^^^^^^
+
+warning: 7 warnings emitted
+

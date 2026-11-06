@@ -90,6 +90,45 @@ pub fn finding(span: proc_macro2::Span, msg: String) -> Finding {
     }
 }
 
+/// Byte range of a `proc_macro2::Span` inside `text`.
+///
+/// Used by lints that walk the parsed AST and need to compare AST node positions
+/// against byte offsets found by a raw source scan (comments live only in source
+/// text, so those scans cannot come from the AST).
+pub fn byte_range(text: &str, span: proc_macro2::Span) -> (usize, usize) {
+    let start = span.start();
+    let end = span.end();
+    let lo = byte_offset(text, start.line, start.column);
+    let hi = byte_offset(text, end.line, end.column).max(lo);
+    (lo, hi)
+}
+
+/// Byte range covering every token of `tokens`.
+///
+/// The item-level span of interest is the union of its token spans: `syn::Item`
+/// has no `span()` method, and a region built by `quote::ToTokens` is spanned by
+/// its first and last real token.
+pub fn token_byte_range(text: &str, tokens: &impl quote::ToTokens) -> (usize, usize) {
+    let mut start = usize::MAX;
+    let mut end = 0;
+    for tree in tokens.to_token_stream() {
+        let span = match tree {
+            proc_macro2::TokenTree::Group(group) => group.span(),
+            proc_macro2::TokenTree::Ident(ident) => ident.span(),
+            proc_macro2::TokenTree::Punct(punct) => punct.span(),
+            proc_macro2::TokenTree::Literal(literal) => literal.span(),
+        };
+        let start_line = span.start();
+        start = start.min(byte_offset(text, start_line.line, start_line.column));
+        let end_line = span.end();
+        end = end.max(byte_offset(text, end_line.line, end_line.column));
+    }
+    if start == usize::MAX {
+        return (0, 0);
+    }
+    (start.min(text.len()), end.min(text.len()))
+}
+
 /// Byte offset of the start of `line` (1-based) plus `column` characters.
 ///
 /// `proc_macro2::Span::start()` reports its column in **characters**, not bytes,

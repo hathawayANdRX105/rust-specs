@@ -160,3 +160,33 @@ Re-scan after merge (gated 6-rule scan): **0 hits** for
 
 Note: the ferrite-ci gate now loads only the six adopted rules (PRs #45/#46/#47)
 so experimental rules in `lints/` cannot break the gate.
+
+## cjk-in-code (2026-11-06, first scan)
+
+New rule: Chinese text in comments, string literals and identifiers outside test code. Comments
+are never exempt — a Chinese comment above a test function is reported the same way as one in
+`src/` — while strings and identifiers are exempt in test scope, in i18n/data paths, in rsx
+`data-*` attributes and in `include_str!` arguments. rsx element copy stays with
+`dioxus-rsx-cjk-text` and is not reported twice.
+
+Whole-crate runs against ferrite (`--no-deps -p <crate>`, nightly-2026-08-20):
+
+| Crate | Hits | Breakdown | Notes |
+|---|---|---|---|
+| `api-mcp` | 82 | 82 strings, 0 comments, 0 identifiers | log and error strings in `src/mcp_*.rs` |
+| `coder-tools` | 10 | 10 comments, 0 strings | doc comments quoting Chinese terms in backticks |
+| `chatroom` (ui/page-chat) | 0 | — | the Chinese there is rsx copy, owned by `dioxus-rsx-cjk-text` |
+| `i18n` | 0 | — | crate-name exemption; `"中文"` is the locale's own display name |
+
+The rule is `Warn` and reports pre-existing debt, so the first run is a sizing exercise: do not
+promote it to `-D` until the crates above are cleaned up. A full `--all --workspace` scan was not
+run here; the per-crate numbers are from real runs and the workspace total comes from:
+
+```sh
+cargo +nightly-2026-08-20 dylint --path /home/hathaway/projects/rust-specs \
+  --pattern 'lints/cjk-in-code' --all --workspace
+```
+
+An independent pre-scan (a Python lexer, not the lint) over `crates/`, `apps/`, `ui/` and `benches/`
+found 79 Chinese comment runs and 1254 Chinese string runs outside test paths; the string hits
+concentrate in `api-*` and `harness-*`, which is where the cleanup would land.

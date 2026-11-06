@@ -198,6 +198,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cjk_in_code"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dioxus-lint-scope",
+ "dioxus-rsx",
+ "dioxus-rsx-scan",
+ "dylint_linting",
+ "dylint_testing",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -360,6 +375,7 @@ version = "0.1.0"
 dependencies = [
  "dioxus-rsx",
  "proc-macro2",
+ "quote",
  "syn 2.0.119",
 ]
 
