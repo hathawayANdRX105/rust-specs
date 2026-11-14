@@ -30,8 +30,8 @@ text = '''
 caption = '常用入口 —— 优先用这些，别自己拼命令：'
 headers = ["Purpose", "Command"]
 rows = [
-  ["规范门禁（结构规则 + dylint）", "`bash scripts/spec-check.sh` / `bash scripts/lint-dylint.sh`"],
-  ["PR 格式门禁", "`cargo xtask check github-pr --title ... --body-file ...`"],
+  ["规范门禁（结构规则 + dylint）", "`just spec-check` / `just lint`（`just gate` 两层都跑）"],
+  ["PR 格式门禁", "`just pr-check <N>`"],
   ["生产实例状态", "`silverq status`"],
   ["规则表热更（白名单 / 国内直连表）", "`silverq config-reload`"],
   ["容器实验室（数据面 / TUN 实验）", "`~/.local/bin/silverq-lab.sh`"],
@@ -122,7 +122,7 @@ id = "constraints.docs-map"
 title = "遇到什么情况，读哪份文档"
 tables = [{ headers = ["场景", "文档"], rows = [
   ["发新版本（版本号怎么算、tag、Release 核对）", "skill `version-stats`（版本口径唯一正本）"],
-  ["规范门禁的规则原文", "`~/projects/rust-specs/specs/`（人读规范）+ `cargo xtask check github-pr`"],
+  ["规范门禁的规则原文", "`~/projects/rust-specs/specs/`（人读规范）+ `just pr-check <N>`（PR 格式）"],
   ["TUN 历史排查结论、实验室用法、部署拓扑", "`todo/tun-handover.md`（已冻结，TUN 不做了，仅作史料）"],
   ["数据面/TUN 实验（不动宿主机）", "`~/.local/bin/silverq-lab.sh`（容器 netns 完整透明链路）"],
   ["CI 结构与三种 feature 矩阵的理由", "根 `README.md` 的 CI 一节"],
