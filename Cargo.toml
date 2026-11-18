@@ -9,7 +9,7 @@ license = "MIT"
 publish = false
 
 [workspace.dependencies]
-dylint_linting = "6.0"
+dylint_linting = "6.4"
 
 [workspace.lints.rust.unexpected_cfgs]
 level = "deny"

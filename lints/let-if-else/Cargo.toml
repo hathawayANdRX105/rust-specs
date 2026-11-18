@@ -13,12 +13,12 @@ crate-type = ["cdylib"]
 clippy_utils = { git = "https://github.com/rust-lang/rust-clippy", rev = "21baba9c10c5d179915cae82e6247bc2337872fb" }
 dioxus-lint-scope = { path = "../../support/dioxus-lint-scope" }
 dioxus-rsx-scan = { path = "../../support/dioxus-rsx-scan" }
-dylint_linting = "6.0"
+dylint_linting = "6.4"
 proc-macro2 = { version = "1", features = ["span-locations"] }
 syn = { version = "2", features = ["full", "visit"] }
 
 [dev-dependencies]
-dylint_testing = "6.0"
+dylint_testing = "6.4"
 
 [package.metadata.rust-analyzer]
 rustc_private = true
