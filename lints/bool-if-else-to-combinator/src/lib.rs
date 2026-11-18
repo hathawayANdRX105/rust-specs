@@ -16,7 +16,7 @@ use clippy_utils::sugg::Sugg;
 use clippy_utils::visitors::for_each_expr_without_closures;
 use rustc_errors::Applicability;
 use rustc_hir::attrs::lang_items::LangItem::{self, OptionSome, ResultErr, ResultOk};
-use rustc_hir::{Expr, ExprKind, UnOp};
+use rustc_hir::{Expr, ExprKind, MatchSource, UnOp};
 use rustc_lint::{LateContext, LateLintPass};
 use rustc_middle::ty::{Ty, TyCtxt};
 use rustc_span::symbol::sym;
@@ -79,6 +79,10 @@ dylint_linting::declare_late_lint! {
     /// - Both branch blocks must be a single expression; a branch that binds
     ///   something first (`{ let n = ..; Some(n) }`) cannot move into a
     ///   combinator argument and is not reported.
+    /// - A payload that escapes (`.await`, `return`, `break`, `continue`,
+    ///   `yield`) cannot move into a combinator argument either: `then` /
+    ///   `ok_or_else` take a closure, where those constructs would change
+    ///   meaning, so such a shape is not reported.
     /// - `else if` chains are not reported as a whole; each leaf `if`/`else`
     ///   is its own expression and is checked on its own.
     /// - No suggestion is emitted when a payload needs a coercion at the
@@ -200,6 +204,28 @@ fn has_let_condition(expr: &Expr<'_>) -> bool {
     .is_some()
 }
 
+/// A payload that escapes (`?`-style `.await`, `return`, `break`, `continue`,
+/// `yield`) cannot move behind a method call: `then` / `ok_or_else` take a
+/// closure, and inside one those constructs would mean something else — an
+/// `.await` alone does not even compile there.
+fn has_escape(expr: &Expr<'_>) -> bool {
+    for_each_expr_without_closures(expr, |e| {
+        if matches!(
+            e.kind,
+            ExprKind::Ret(..)
+                | ExprKind::Break(..)
+                | ExprKind::Continue(..)
+                | ExprKind::Yield(..)
+                | ExprKind::Match(.., MatchSource::AwaitDesugar)
+        ) {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
+    })
+    .is_some()
+}
+
 impl<'tcx> LateLintPass<'tcx> for BoolIfElseToCombinator {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
         if expr.span.from_expansion() {
@@ -246,6 +272,12 @@ impl<'tcx> LateLintPass<'tcx> for BoolIfElseToCombinator {
             .ty_adt_def()
             .is_some_and(|adt| cx.tcx.is_diagnostic_item(expected, adt.did()))
         {
+            return;
+        }
+
+        // A payload that escapes cannot move into a combinator argument, so
+        // there is no rewrite to offer at all.
+        if has_escape(shape.value) || shape.err.is_some_and(|err| has_escape(err)) {
             return;
         }
 

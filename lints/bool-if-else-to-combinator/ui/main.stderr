@@ -1,5 +1,5 @@
 warning: bool `if`/`else` wraps a value in `Option`; use `bool::then_some(..)`
-  --> $DIR/main.rs:8:5
+  --> $DIR/main.rs:9:5
    |
 LL | /     if ready {
 LL | |         Some(1)
@@ -11,7 +11,7 @@ LL | |     }
    = note: `#[warn(bool_if_else_to_combinator)]` on by default
 
 warning: bool `if`/`else` wraps a value in `Option`; use `bool::then_some(..)`
-  --> $DIR/main.rs:17:5
+  --> $DIR/main.rs:18:5
    |
 LL | /     if ready {
 LL | |         None
@@ -21,7 +21,7 @@ LL | |     }
    | |_____^ help: replace with: `(!ready).then_some(2)`
 
 warning: bool `if`/`else` wraps a value in `Option`; use `bool::then_some(..)`
-  --> $DIR/main.rs:26:5
+  --> $DIR/main.rs:27:5
    |
 LL | /     if !ready {
 LL | |         None
@@ -31,7 +31,7 @@ LL | |     }
    | |_____^ help: replace with: `ready.then_some(3)`
 
 warning: bool `if`/`else` wraps a value in `Result`; use `bool::then_some(..).ok_or(..)`
-  --> $DIR/main.rs:36:5
+  --> $DIR/main.rs:37:5
    |
 LL | /     if ready {
 LL | |         Ok(1)
@@ -41,7 +41,7 @@ LL | |     }
    | |_____^ help: replace with: `ready.then_some(1).ok_or(())`
 
 warning: bool `if`/`else` wraps a value in `Result`; use `bool::then_some(..).ok_or(..)`
-  --> $DIR/main.rs:45:5
+  --> $DIR/main.rs:46:5
    |
 LL | /     if ready {
 LL | |         Err(7)
@@ -51,7 +51,7 @@ LL | |     }
    | |_____^ help: replace with: `(!ready).then_some(2).ok_or(7)`
 
 warning: bool `if`/`else` wraps a value in `Result`; use `bool::ok_or(..)`
-  --> $DIR/main.rs:54:5
+  --> $DIR/main.rs:55:5
    |
 LL | /     if ready {
 LL | |         Ok(())
@@ -61,7 +61,7 @@ LL | |     }
    | |_____^ help: replace with: `ready.ok_or(7)`
 
 warning: bool `if`/`else` wraps a value in `Result`; use `bool::ok_or_else(..)`
-  --> $DIR/main.rs:63:5
+  --> $DIR/main.rs:64:5
    |
 LL | /     if ready {
 LL | |         Ok(())
@@ -71,7 +71,7 @@ LL | |     }
    | |_____^ help: replace with: `ready.ok_or_else(|| String::from("boom"))`
 
 warning: bool `if`/`else` wraps a value in `Result`; use `bool::ok_or(..)`
-  --> $DIR/main.rs:72:5
+  --> $DIR/main.rs:73:5
    |
 LL | /     if ready {
 LL | |         Err(9)
@@ -81,7 +81,7 @@ LL | |     }
    | |_____^ help: replace with: `(!ready).ok_or(9)`
 
 warning: bool `if`/`else` wraps a value in `Option`; use `bool::then(..)`
-  --> $DIR/main.rs:82:5
+  --> $DIR/main.rs:83:5
    |
 LL | /     if ready {
 LL | |         Some(String::from("value"))
@@ -91,7 +91,7 @@ LL | |     }
    | |_____^ help: replace with: `ready.then(|| String::from("value"))`
 
 warning: bool `if`/`else` wraps a value in `Result`; use `bool::then_some(..).ok_or_else(..)`
-  --> $DIR/main.rs:92:5
+  --> $DIR/main.rs:93:5
    |
 LL | /     if ready {
 LL | |         Ok(1)
@@ -101,7 +101,7 @@ LL | |     }
    | |_____^ help: replace with: `ready.then_some(1).ok_or_else(|| String::from("boom"))`
 
 warning: bool `if`/`else` wraps a value in `Result`; use `bool::then(..).ok_or(..)`
-  --> $DIR/main.rs:101:5
+  --> $DIR/main.rs:102:5
    |
 LL | /     if ready {
 LL | |         Ok(String::from("value"))
@@ -111,7 +111,7 @@ LL | |     }
    | |_____^ help: replace with: `ready.then(|| String::from("value")).ok_or(7)`
 
 warning: bool `if`/`else` wraps a value in `Option`; use `bool::then_some(..)`
-  --> $DIR/main.rs:111:5
+  --> $DIR/main.rs:112:5
    |
 LL | /     if ready && flag {
 LL | |         Some(1)
@@ -121,7 +121,7 @@ LL | |     }
    | |_____^ help: replace with: `(ready && flag).then_some(1)`
 
 warning: bool `if`/`else` wraps a value in `Option`; use `bool::then_some(..)`
-  --> $DIR/main.rs:121:5
+  --> $DIR/main.rs:122:5
    |
 LL | /     if ready || flag {
 LL | |         None
@@ -131,7 +131,7 @@ LL | |     }
    | |_____^ help: replace with: `(!(ready || flag)).then_some(2)`
 
 warning: bool `if`/`else` wraps a value in `Option`; use `bool::then_some(..)`
-  --> $DIR/main.rs:134:5
+  --> $DIR/main.rs:135:5
    |
 LL | /     if compute() {
 LL | |         Some(1)
@@ -141,7 +141,7 @@ LL | |     }
    | |_____^ help: replace with: `compute().then_some(1)`
 
 warning: bool `if`/`else` wraps a value in `Option`/`Result` but a payload needs a coercion the combinator cannot express
-  --> $DIR/main.rs:145:5
+  --> $DIR/main.rs:146:5
    |
 LL | /     if ready {
 LL | |         Some(values)

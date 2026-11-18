@@ -1,3 +1,4 @@
+// edition:2024
 // run-rustfix
 // rustfix-only-machine-applicable
 #![allow(dead_code)]
@@ -141,6 +142,35 @@ fn if_let(o: Option<u32>) -> Option<u32> {
         Some(v)
     } else {
         None
+    }
+}
+
+async fn read_u32(v: u32) -> u32 {
+    v
+}
+
+// A payload that awaits cannot move behind a method call: `then` takes a
+// closure and `.await` is not allowed inside one — no report.
+async fn awaited_payload(flag: bool) -> Option<u32> {
+    if flag {
+        Some(read_u32(1).await)
+    } else {
+        None
+    }
+}
+
+// A payload that returns from the enclosing function cannot move into a
+// closure either — no report.
+fn returning_payload(flag: bool) -> Option<u32> {
+    if flag {
+        None
+    } else {
+        Some({
+            if flag {
+                return None;
+            }
+            2
+        })
     }
 }
 

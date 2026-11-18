@@ -60,6 +60,10 @@ no logic beyond the wrapper — nothing is gained by spelling them out.
   nothing.
 - **`if let` / let-chains**: the condition is not an expression that can move
   behind a method call.
+- **A payload that escapes**: `.await`, `return`, `break`, `continue` or
+  `yield` in the payload cannot move into a combinator argument — `then` /
+  `ok_or_else` take a closure, where those constructs would change meaning, so
+  the shape is not reported at all.
 - **Locally defined `Some`/`None` variants**: constructors are resolved by
   language item, not by name.
 
