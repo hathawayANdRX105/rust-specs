@@ -190,3 +190,42 @@ cargo +nightly-2026-08-20 dylint --path /home/hathaway/projects/rust-specs \
 An independent pre-scan (a Python lexer, not the lint) over `crates/`, `apps/`, `ui/` and `benches/`
 found 79 Chinese comment runs and 1254 Chinese string runs outside test paths; the string hits
 concentrate in `api-*` and `harness-*`, which is where the cleanup would land.
+
+## bool-if-else-to-combinator (2026-11-18, first scan)
+
+New rule: a `bool` `if`/`else` whose branches only wrap a value
+(`Some(v)`/`None`, `Ok(v)`/`Err(e)`) — the condition already is the `bool` the
+combinator chain starts from. `Option` becomes `then_some`/`then`, a
+value-carrying `Result` becomes `then_some(v).ok_or(e)`, and a `Result<(), E>`
+becomes `ok_or`/`ok_or_else`, because `bool::ok_or` returns `Result<(), E>` and
+cannot carry the `Ok` value.
+
+Per-crate runs over all 16 packages of the ferrite worktree (`2d9dd98f`):
+
+```sh
+cargo +nightly-2026-08-20 dylint --path /home/hathaway/homono/.worktree/rust-specs \
+  --pattern 'lints/bool-if-else-to-combinator' --no-deps -p <crate>
+```
+
+**16 hits.**
+
+| Crate              | Hits | Shape                                                                                                                             |
+| ------------------ | ---- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `api-billing`      | 6    | 5 `Result<(), E>` → `ok_or`; 1 reported without a suggestion (payload coercion, `topup.rs:184`)                                   |
+| `app-config`       | 4    | `Result<(), E>` → `ok_or_else` (`keys.rs` validators)                                                                             |
+| `api-control-plane`| 3    | 2 `Option` → `then_some` (`channel/probe.rs:447`, `channel/service.rs:83`), 1 `Result<(), E>` → `ok_or` (`http_template.rs:30`)    |
+| `api-gateway-state`| 1    | `Option` → `then_some` (`snapshot.rs:862`)                                                                                        |
+| `api-proxy`        | 1    | `Result<(), E>` → `ok_or` (`http_template.rs:30`)                                                                                 |
+| `app-assembly`     | 1    | `Option` → `then` (`lib.rs:239`, lazy payload)                                                                                    |
+| other 10 packages  | 0    | —                                                                                                                                 |
+
+Every real `Result` hit is an `Ok(())` validator (auth threshold checks, config
+validators). The first version of the rule suggested
+`(u.role >= ADMIN_ROLE_THRESHOLD).then_some(()).ok_or(AuthError::Forbidden)` for
+those, which is noise; the rule now ends a unit `Ok` at the error alone and
+suggests `(u.role >= ADMIN_ROLE_THRESHOLD).ok_or(AuthError::Forbidden)`. The four
+`Option` hits are the only value-carrying shapes in this workspace.
+
+Note on running: `cargo dylint` builds the rule into rust-specs' own
+`target/release/` but loads it from `<repo>/target/dylint/libraries/<toolchain>/release/`,
+so a repo without a dylint gate needs the `.so` copied there first.
