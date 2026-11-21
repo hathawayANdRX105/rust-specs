@@ -1,0 +1,62 @@
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:38:1
+   |
+LL | pub fn undocumented_fn() {} // 公共函数缺少文档注释
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(pub_items_have_docs)]` on by default
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:40:1
+   |
+LL | pub struct UndocumentedStruct; // 公共结构体缺少文档注释
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:42:1
+   |
+LL | / pub enum UndocumentedEnum { // 公共枚举缺少文档注释
+LL | |     A,
+LL | | }
+   | |_^
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:46:1
+   |
+LL | pub const UNDOCUMENTED_CONST: u32 = 2; // 公共常量缺少文档注释
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:48:1
+   |
+LL | pub static UNDOCUMENTED_STATIC: u32 = 3; // 公共静态量缺少文档注释
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:50:1
+   |
+LL | pub trait UndocumentedTrait {} // 公共 trait 缺少文档注释
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:52:1
+   |
+LL | pub type UndocumentedAlias = u32; // 公共类型别名缺少文档注释
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:54:1
+   |
+LL | / pub union UndocumentedUnion { // 公共 union 缺少文档注释
+LL | |     a: u32,
+LL | | }
+   | |_^
+
+warning: `pub` item is missing a doc comment; add `/// ...` explaining purpose
+  --> $DIR/main.rs:58:1
+   |
+LL | pub mod undocumented_mod {} // 公共模块缺少文档注释
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: 9 warnings emitted
+

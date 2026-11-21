@@ -1,0 +1,40 @@
+warning: `match` with one specific arm and one `_` arm is a binary choice; use `if`/`else`
+  --> $DIR/main.rs:5:5
+   |
+LL | /     match s {
+LL | |         "a" => 1,
+LL | |         _ => 2,
+LL | |     }
+   | |_____^
+   |
+   = note: `#[warn(two_arm_match_to_if)]` on by default
+
+warning: `match` with one specific arm and one `_` arm is a binary choice; use `if`/`else`
+  --> $DIR/main.rs:13:5
+   |
+LL | /     match v {
+LL | |         None => 1,
+LL | |         _ => 2,
+LL | |     }
+   | |_____^
+
+warning: `match` with one specific arm and one `_` arm is a binary choice; use `if`/`else`
+  --> $DIR/main.rs:21:5
+   |
+LL | /     match b {
+LL | |         true => 1,
+LL | |         _ => 2,
+LL | |     }
+   | |_____^
+
+warning: `match` with one specific arm and one `_` arm is a binary choice; use `if`/`else`
+  --> $DIR/main.rs:29:5
+   |
+LL | /     match n {
+LL | |         1..=5 => 1,
+LL | |         _ => 2,
+LL | |     }
+   | |_____^
+
+warning: 4 warnings emitted
+
