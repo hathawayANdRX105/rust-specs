@@ -1,0 +1,16 @@
+warning: test function is missing a doc comment; add `///` explaining what it verifies
+  --> $DIR/main.rs:6:1
+   |
+LL | fn top_level_undocumented() {}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(test_fns_have_docs)]` on by default
+
+warning: test function is missing a doc comment; add `///` explaining what it verifies
+  --> $DIR/main.rs:13:5
+   |
+LL |     fn module_test_undocumented() {}
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: 2 warnings emitted
+

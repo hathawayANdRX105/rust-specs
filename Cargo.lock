@@ -1082,6 +1082,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
+name = "match_arm_wildcard"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
 name = "max_nesting_depth"
 version = "0.1.0"
 dependencies = [
@@ -1210,6 +1219,15 @@ dependencies = [
  "quote",
  "syn 2.0.119",
  "version_check",
+]
+
+[[package]]
+name = "pub_items_have_docs"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
 ]
 
 [[package]]
@@ -1545,6 +1563,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "test_fns_have_docs"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
+]
+
+[[package]]
 name = "test_placement"
 version = "0.1.0"
 dependencies = [
@@ -1726,6 +1753,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
+]
+
+[[package]]
+name = "two_arm_match_to_if"
+version = "0.1.0"
+dependencies = [
+ "clippy_utils",
+ "dylint_linting",
+ "dylint_testing",
 ]
 
 [[package]]

@@ -66,8 +66,7 @@ fn renders_the_save_label() {
 ## Known problems
 
 - It cannot tell user-visible copy from log strings: a Chinese `log::warn!` message is reported
-  like any other literal, which is why the first run on a large workspace reports existing debt
-  (see `FINDINGS.md`).
+  like any other literal, which is why the first run on a large workspace reports existing debt.
 - Chinese inside the inline-code spans of a doc comment (`` `退避重试` ``) is reported as part of
   the comment. The fix is to write the example in English, not to restructure the doc.
 - CJK is detected with the same three ranges as `dioxus-rsx-cjk-text` (`U+3400..U+4DBF`,

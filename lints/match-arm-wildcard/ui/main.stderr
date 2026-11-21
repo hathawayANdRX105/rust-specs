@@ -1,0 +1,16 @@
+warning: match arm uses bare `_`; use a named binding (e.g. `other`) so the payload has a name
+  --> $DIR/main.rs:12:9
+   |
+LL |         _ => 0,
+   |         ^
+   |
+   = note: `#[warn(match_arm_wildcard)]` on by default
+
+warning: match arm uses bare `_`; use a named binding (e.g. `other`) so the payload has a name
+  --> $DIR/main.rs:20:9
+   |
+LL |         _ => 0,
+   |         ^
+
+warning: 2 warnings emitted
+
